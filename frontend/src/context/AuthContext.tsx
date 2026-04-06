@@ -43,10 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  /**
-   * Fetch current logged-in user (student or admin)
-   * Returns true if logged in, false otherwise
-   */
   const fetchUser = async (type: "student" | "admin"): Promise<boolean> => {
     try {
       const endpoint =
@@ -55,19 +51,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(userData);
       setAuthType(type);
       return true;
-    } catch (error: any) {
-      // 🔹 Suppress normal 401 unauthorized logs (expected before login)
+    } 
+    catch (error: any) {
       if (error?.response?.status === 401 || error?.message === "Unauthorized") {
         return false;
       }
-
-      // 🔸 Log only unexpected backend errors
+      
       console.error(`${type} fetchUser error:`, error);
       return false;
     }
   };
   
-  /** Check if any user/admin is already logged in (called on page load) */
+  // Check if any user/admin is already logged in (called on page load)
   useEffect(() => {
     const checkUser = async () => {
       setIsLoading(true);
@@ -80,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkUser();
   }, []);
 
-  /** Login handler */
+  // Login handler
   const login = async (type: "student" | "admin", credentials: any) => {
     const endpoint = type === "student" ? "/users/login" : "/admin/login";
 
@@ -94,7 +89,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         navigate(type === "student" ? "/student/dashboard" : "/admin/dashboard");
       }
-    } catch (error: any) {
+    } 
+    catch (error: any) {
       console.error(`${type} login failed:`, error);
 
       const message =
@@ -105,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  /** Logout handler */
+  // Logout handler
   const logout = useCallback(async () => {
     if (!authType) {
       setUser(null);
@@ -129,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [authType, navigate]);
 
-  /** Wrapper to handle expired tokens automatically */
+  // Wrapper to handle expired tokens automatically
   const wrapApiCall = useCallback(
     async (apiCall: () => Promise<any>): Promise<any | undefined> => {
       try {

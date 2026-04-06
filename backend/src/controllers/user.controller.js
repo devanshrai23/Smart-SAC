@@ -11,6 +11,7 @@ import { Announcement } from "../models/announcement.model.js";
 import { randomBytes } from "crypto";
 import { Game } from "../models/game.model.js";
 
+// Generate Access and Refresh Tokens
 const generateAccessTokenAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -25,11 +26,13 @@ const generateAccessTokenAndRefreshTokens = async (userId) => {
     await user.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
-  } catch (error) {
+  }
+  catch (error) {
     throw new ApiError(500, "Error while generating tokens");
   }
 };
 
+// User Registration
 const registerUser = asyncHandler(async(req,res) => {
     const {fullname, email, username, roll_no, password, phone_number} = req.body;
     
@@ -122,26 +125,26 @@ const registerUser = asyncHandler(async(req,res) => {
     }
 });
 
+// User Login
 const loginUser = asyncHandler(async (req,res) => {
- 
     const {email,password} = req.body;
     if(!email){
         throw new ApiError(400,"username or email is required");
     }
+
     const user = await User.findOne({
         $or: [{username : email},{email}]
     });
-
     if(!user){
         throw new ApiError(400,"user not found");
     }
-    const ispassvalid = await user.isPasswordCorrect(password);
 
+    const ispassvalid = await user.isPasswordCorrect(password);
     if(!ispassvalid){
         throw new ApiError(401,"invalid password");
     }
 
-   const {accessToken, refreshToken} = await generateAccessTokenAndRefreshTokens(user._id);
+    const {accessToken, refreshToken} = await generateAccessTokenAndRefreshTokens(user._id);
 
     const loggedinUser = await User.findById(user._id).select("-password -refreshToken" );
 
@@ -149,7 +152,7 @@ const loginUser = asyncHandler(async (req,res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production", 
         sameSite: "lax", 
-        };
+    };
 
     console.log("user logged in");
     return res.status(200)
@@ -158,7 +161,9 @@ const loginUser = asyncHandler(async (req,res) => {
     .json(new ApiResponse(
         200,
         {
-            user:loggedinUser,accessToken,refreshToken
+          user:loggedinUser,
+          accessToken,
+          refreshToken
         },
         "user loggin in succesfully",
     ))

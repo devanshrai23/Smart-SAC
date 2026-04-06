@@ -43,6 +43,7 @@ router.route("/current-user").get(verifyJWT, getCurrentUser);
 router.route("/dashboard").get(verifyJWT, dashboardDetails);
 router.route("/update-account-details").post(verifyJWT, updateAccountDetails);
 
+// Player System
 router.route("/get-all-players").get(verifyJWT, getAllPlayers);
 router.route("/get-games").get(verifyJWT, getGames);
 router.route("/get-players").get(verifyJWT, getPlayers);

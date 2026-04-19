@@ -14,19 +14,17 @@ import EquipmentHistoryPage from "./pages/admin/EquipmentHistoryPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminGames from "./pages/AdminGames";
+
 // Auth Pages
 import Login from "./pages/Login"; 
 import StudentLogin from "./pages/student/StudentLogin";
 import AdminLogin from "./pages/admin/AdminLogin"
-import RegisterAdmin from "./pages/admin/RegisterAdmin"; // ✅ admin register
+import RegisterAdmin from "./pages/admin/RegisterAdmin";
 import StudentRegister from "./pages/student/StudentRegister";
 import ForgotPassword from "./pages/student/ForgotPassword";
-
-// Student Pages
-// In your App.tsx or routing file
 import EmailVerification from "./pages/student/EmailVerification";
 
-// Add these routes
+// Routes
 import StudentDashboard from "./pages/student/Dashboard";
 import StudentProfile from "./pages/student/Profile";
 import FindPlayers from "./pages/student/Players";
@@ -56,8 +54,8 @@ const App = () => (
             <Route path="/announcements" element={<AllAnnouncements />} />
             <Route path="/" element={<Login />} />
             <Route path="/student-login" element={<StudentLogin />} />
-            <Route path="/admin/login" element={<AdminLogin />} /> {/* ✅ FIXED */}
-            <Route path="/admin/register" element={<RegisterAdmin />} /> {/* ✅ register route */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/register" element={<RegisterAdmin />} />
 
             <Route path="/student-register" element={<StudentRegister />} />
             <Route path="/verify-email" element={<EmailVerification />} />
@@ -88,7 +86,6 @@ const App = () => (
 
             </Route>
 
-            {/* 404 Fallback */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

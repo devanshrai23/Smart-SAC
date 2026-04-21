@@ -15,7 +15,6 @@ import {
   Users,
 } from "lucide-react";
 
-const Index = () => {
   const equipmentData = [
     {
       name: "Table Tennis",
@@ -106,6 +105,8 @@ const Index = () => {
       available: true,
     },
   ];
+const Index = () => {
+
 
   return (
     <div className="min-h-screen">

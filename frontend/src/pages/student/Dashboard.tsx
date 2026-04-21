@@ -73,7 +73,7 @@ const getEquipmentIcon = (name: string) => {
 
 const StudentDashboard = () => {
   const { user, wrapApiCall } = useAuth();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient();  //used to refresh data after updates
   const navigate = useNavigate();
   const [showOnlyAvailable, setShowOnlyAvailable] = React.useState(true);
 
@@ -83,7 +83,9 @@ const StudentDashboard = () => {
     // Return the data property from the response
     return response?.data?.data || response?.data || response;
   };
+ 
 
+   //call api automatically when component changes and update ui based on response and cache results
   const { data: dashboardData, isLoading: isLoadingDashboard, error: dashboardError } = useQuery({
     queryKey: ["studentDashboard"],
     queryFn: fetchDashboardData,
@@ -144,6 +146,7 @@ const StudentDashboard = () => {
   });
 
   const handleBookEquipment = (id: string) => bookEquipmentMutation.mutate(id);
+
   const handleSendRequest = (id: string, sport: string) =>
     sendMessageMutation.mutate({
       receiverId: id,

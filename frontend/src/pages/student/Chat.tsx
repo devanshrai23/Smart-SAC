@@ -45,6 +45,7 @@ const Chat = () => {
     queryFn: () => wrapApiCall(() => api.get("/users/get-conversations"))
   });
 
+
   const fetchMessages = (otherUserId: string) => {
     return wrapApiCall(() => api.get(`/users/get-messages/${otherUserId}`)) as Promise<ApiMessage[]>;
   };

@@ -13,4 +13,4 @@ connectDB().then(() => {
         console.log("mongo db connection failed in app listend thing", err);
     });
 
-console.log("ENV CHECK:", process.env.MONGO_URI);
+console.log("ENV CHECK:", process.env.MONGODB_URL);

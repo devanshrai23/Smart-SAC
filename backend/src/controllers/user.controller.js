@@ -899,6 +899,7 @@ export {registerUser,
     getMessages,
     getGames,
     brokenEquipmentTicket,
+    newEquipmentTicket,
     verifyEmail,
     resendVerificationEmail
 };

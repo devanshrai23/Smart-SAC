@@ -18,6 +18,7 @@ import {
   getMessages,
   getGames,
   brokenEquipmentTicket,
+  newEquipmentTicket,
   verifyEmail,
   resendVerificationEmail
 } from "../controllers/user.controller.js";
@@ -53,5 +54,6 @@ router.route("/send-message").post(verifyJWT, sendMessage);
 router.route("/get-conversations").get(verifyJWT, getConversations);
 router.route("/get-messages/:otherUserId").get(verifyJWT, getMessages);
 router.route("/create-ticket").post(verifyJWT, brokenEquipmentTicket);
+router.route("/request-new-equipment").post(verifyJWT, newEquipmentTicket);
 
 export default router;

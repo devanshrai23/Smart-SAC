@@ -27,6 +27,4 @@ const equipmentSchema = new mongoose.Schema({
 },{timestamps:true}
 )
 
-
-
-export const Equipment = mongoose.model("Equipment",equipmentSchema);  
+export const Equipment = mongoose.model("Equipment",equipmentSchema);

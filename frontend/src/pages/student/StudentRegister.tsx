@@ -64,6 +64,13 @@ const StudentRegister = () => {
       return false;
     }
 
+    if (!formData.email.toLowerCase().endsWith('@iiita.ac.in')) {
+      sonner.error("Invalid email address", {
+        description: "Registration is only allowed with IIITA student email IDs (@iiita.ac.in)"
+      });
+      return false;
+    }
+
     return true;
   };
 

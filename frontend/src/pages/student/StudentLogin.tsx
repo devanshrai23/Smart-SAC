@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity } from "lucide-react";
+import { toast as sonner } from "sonner";
 
 const StudentLogin = () => {
   const [email, setEmail] = useState("");
@@ -16,6 +17,14 @@ const StudentLogin = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (email.includes('@') && !email.toLowerCase().endsWith('@iiita.ac.in')) {
+      sonner.error("Invalid email address", {
+        description: "Login is only allowed with IIITA student email IDs (@iiita.ac.in)"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await login('student', { email, password });

@@ -43,6 +43,10 @@ const registerUser = asyncHandler(async(req,res) => {
         throw new ApiError(400, "All fields are required");
     }
 
+    if (!email.toLowerCase().endsWith('@iiita.ac.in')) {
+        throw new ApiError(400, "Registration is only allowed with IIITA student email IDs (@iiita.ac.in)");
+    }
+
     // Phone number validation (basic 10-digit validation)
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(phone_number)) {
@@ -137,6 +141,10 @@ const loginUser = asyncHandler(async (req,res) => {
     });
     if(!user){
         throw new ApiError(400,"user not found");
+    }
+
+    if (!user.email.toLowerCase().endsWith('@iiita.ac.in')) {
+        throw new ApiError(403, "Login is only allowed for IIITA students");
     }
 
     const ispassvalid = await user.isPasswordCorrect(password);
@@ -535,6 +543,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
   }
 
   if (updates.email) {
+    if (!updates.email.toLowerCase().endsWith('@iiita.ac.in')) {
+      throw new ApiError(400, "Only IIITA student email IDs (@iiita.ac.in) are allowed");
+    }
     const existingEmail = await User.findOne({
       email: updates.email.toLowerCase(),
       _id: { $ne: req.user._id },

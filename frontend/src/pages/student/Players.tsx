@@ -11,16 +11,16 @@ import { toast as sonner } from "sonner";
 
 // Define the type for the Player data we expect
 interface ApiPlayer {
-  _id: string;
+  id: string;
   fullname: string;
   username: string;
   email: string;
   roll_no: string;
   phone_number: string;
   games: {
-    _id: string;
+    id: string;
     game: {
-      _id: string;
+      id: string;
       name: string;
       category?: string;
     };
@@ -156,14 +156,14 @@ const FindPlayers = () => {
             <p>Loading players...</p>
           ) : (
             filteredPlayers.map((player, index) => (
-              <div key={player._id} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+              <div key={player.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
                 <PlayerCard 
-                  playerId={player._id}
+                  playerId={player.id}
                   name={player.fullname}
                   available={true} // You might want to add this field to your ApiPlayer interface
                   games={player.games || []}
                   onSendRequest={handleSendRequest}
-                  isSending={sendMessageMutation.isPending && sendMessageMutation.variables?.receiverId === player._id}
+                  isSending={sendMessageMutation.isPending && sendMessageMutation.variables?.receiverId === player.id}
                 />
               </div>
             ))

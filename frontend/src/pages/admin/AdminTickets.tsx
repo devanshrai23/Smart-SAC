@@ -27,16 +27,16 @@ import { useNavigate } from "react-router-dom";
 
 // Define types
 interface Ticket {
-  _id: string;
+  id: string;
   heading: string;
   content: string;
   status: "open" | "in-process" | "closed";
   equipment: {
-    _id: string;
+    id: string;
     name: string;
   };
   sender: {
-    _id: string;
+    id: string;
     fullname: string;
     email: string;
     roll_no: string;
@@ -268,7 +268,7 @@ const AdminTickets = () => {
             ) : (
               <div className="space-y-4">
                 {filteredTickets?.map((ticket) => (
-                  <Card key={ticket._id} className="hover:shadow-md transition-shadow">
+                  <Card key={ticket.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1">
@@ -317,7 +317,7 @@ const AdminTickets = () => {
                               <Select
                                 value=""
                                 onValueChange={(newStatus) => 
-                                  handleStatusUpdate(ticket._id, newStatus)
+                                  handleStatusUpdate(ticket.id, newStatus)
                                 }
                               >
                                 <SelectTrigger className="w-32">
@@ -398,7 +398,7 @@ const AdminTickets = () => {
                           key={status}
                           variant={selectedTicket.status === status ? "default" : "outline"}
                           size="sm"
-                          onClick={() => handleStatusUpdate(selectedTicket._id, status)}
+                          onClick={() => handleStatusUpdate(selectedTicket.id, status)}
                           disabled={updateTicketMutation.isPending}
                         >
                           {status.replace("-", " ")}

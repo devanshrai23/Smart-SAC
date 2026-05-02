@@ -10,9 +10,9 @@ import { toast as sonner } from "sonner";
 import { Gamepad2, Plus, Trash2 } from "lucide-react";
 
 type Game = {
-  _id: string;
+  id: string;
   name: string;
-  equipment?: { _id: string; name: string; status: string }[];
+  equipment?: { id: string; name: string; status: string }[];
 };
 
 const fetchAdminGames = async () => {
@@ -89,7 +89,7 @@ const AdminGames = () => {
             <p className="text-muted-foreground">No games yet.</p>
           ) : (
             games.map((g) => (
-              <Card key={g._id} className="border-2 hover:shadow-md transition">
+              <Card key={g.id} className="border-2 hover:shadow-md transition">
                 <CardHeader>
                   <CardTitle className="capitalize">{g.name}</CardTitle>
                 </CardHeader>

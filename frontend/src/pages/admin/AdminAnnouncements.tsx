@@ -9,7 +9,7 @@ import { Trash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Announcement {
-  _id: string;
+  id: string;
   heading: string;
   content: string;
   createdAt: string;
@@ -128,7 +128,7 @@ const AdminAnnouncements = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {announcements.map((a) => (
-                  <Card key={a._id} className="relative border hover:shadow-lg transition">
+                  <Card key={a.id} className="relative border hover:shadow-lg transition">
                     <CardHeader className="pb-3">
                       <CardTitle className="pr-10 text-lg">{a.heading}</CardTitle>
                       <p className="text-xs text-muted-foreground">
@@ -142,7 +142,7 @@ const AdminAnnouncements = () => {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleDelete(a._id)}
+                        onClick={() => handleDelete(a.id)}
                         className="absolute top-3 right-3"
                       >
                         <Trash className="w-4 h-4" />

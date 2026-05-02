@@ -16,19 +16,19 @@ import { api } from "@/lib/api";
 
 interface AdminDashboardData {
   equipment: {
-    _id: string;
+    id: string;
     name: string;
     status: "available" | "in-use" | "broken";
   }[];
   announcements: {
-    _id: string;
+    id: string;
     heading: string;
     content: string;
   }[];
 }
 
 interface EquipmentHistoryItem {
-  _id: string;
+  id: string;
   equipment: {
     name: string;
     status: string;
@@ -258,7 +258,7 @@ const AdminDashboard = () => {
               )}
               {data?.announcements.map((item) => (
                 <div
-                  key={item._id}
+                  key={item.id}
                   className="p-4 rounded-lg border hover:bg-muted/30 transition"
                 >
                   <h3 className="font-semibold">{item.heading}</h3>
@@ -287,7 +287,7 @@ const AdminDashboard = () => {
               )}
               {data?.equipment.map((item) => (
                 <div
-                  key={item._id}
+                  key={item.id}
                   className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition"
                 >
                   <span className="font-medium capitalize">{item.name}</span>
@@ -335,7 +335,7 @@ const AdminDashboard = () => {
                 <div className="space-y-3">
                   {equipmentHistory?.history.map((item) => (
                     <div
-                      key={item._id}
+                      key={item.id}
                       className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition"
                     >
                       <div className="flex-1">

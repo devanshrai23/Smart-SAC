@@ -14,7 +14,7 @@ import { toast as sonner } from "sonner";
 
 interface ApiConversation {
   otherUser: {
-    _id: string;
+    id: string;
     fullname: string;
     sport: string;
     isAvailable: boolean;
@@ -27,7 +27,7 @@ interface ApiConversation {
 }
 
 interface ApiMessage {
-  _id: string;
+  id: string;
   sender: string;
   content: string;
   createdAt: string;
@@ -90,10 +90,10 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const selectedChat = conversations?.find((c) => c.otherUser._id === selectedChatId);
+  const selectedChat = conversations?.find((c) => c.otherUser.id === selectedChatId);
 
   if (!selectedChatId && conversations && conversations.length > 0) {
-    setSelectedChatId(conversations[0].otherUser._id);
+    setSelectedChatId(conversations[0].otherUser.id);
   }
 
   return (
@@ -126,10 +126,10 @@ const Chat = () => {
                 )}
                 {conversations?.map((conv) => (
                   <div
-                    key={conv.otherUser._id}
-                    onClick={() => setSelectedChatId(conv.otherUser._id)}
+                    key={conv.otherUser.id}
+                    onClick={() => setSelectedChatId(conv.otherUser.id)}
                     className={`p-4 cursor-pointer transition-colors hover:bg-accent ${
-                      selectedChatId === conv.otherUser._id ? "bg-accent" : ""
+                      selectedChatId === conv.otherUser.id ? "bg-accent" : ""
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -163,7 +163,7 @@ const Chat = () => {
                         </p>
                         <div className="flex items-center justify-between">
                           <p className="text-sm text-muted-foreground truncate">
-                            {conv.lastMessageSender === user?._id ? "You: " : ""}
+                            {conv.lastMessageSender === user?.id ? "You: " : ""}
                             {conv.lastMessage}
                           </p>
                           {conv.unreadCount > 0 && (
@@ -217,11 +217,11 @@ const Chat = () => {
 
                   <div className="flex flex-col w-full space-y-3">
                     {messages?.map((msg) => {
-                      const isSent = String(msg.sender) === String(user?._id);
+                      const isSent = String(msg.sender) === String(user?.id);
 
                       return (
                         <div
-                          key={msg._id}
+                          key={msg.id}
                           className={`flex w-full ${
                             isSent ? "justify-end" : "justify-start"
                           }`}

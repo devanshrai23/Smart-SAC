@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 
 interface Announcement {
-  _id: string;
+  id: string;
   heading: string;
   content: string;
   footer?: string;
@@ -55,7 +55,7 @@ const AllAnnouncements = () => {
           <div className="space-y-6 animate-fade-in">
             {announcements.map((ann) => (
               <Card
-                key={ann._id}
+                key={ann.id}
                 className="hover:shadow-lg transition-all border border-border"
               >
                 <CardHeader>

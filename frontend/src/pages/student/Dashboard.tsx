@@ -22,16 +22,16 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
 interface ApiPlayer {
-  _id: string;
+  id: string;
   fullname: string;
   username: string;
   email: string;
   roll_no: string;
   phone_number: string;
   games: {
-    _id: string;
+    id: string;
     game: {
-      _id: string;
+      id: string;
       name: string;
       category?: string;
     };
@@ -41,7 +41,7 @@ interface ApiPlayer {
 }
 
 interface ApiEquipment {
-  _id: string;
+  id: string;
   name: string;
   status: "available" | "in-use" | "broken";
   user?: { fullname: string; roll_no: string; phone_number: string };
@@ -53,13 +53,13 @@ interface DashboardData {
   unreadMessages: number;
   openTickets: number;
   equipment: ApiEquipment[];
-  announcements: { _id: string; heading: string; content: string; footer?: string }[];
+  announcements: { id: string; heading: string; content: string; footer?: string }[];
   totalHours: number;
   gamesPlayed: number;
 }
 
 interface ApiGame {
-  _id: string;
+  id: string;
   name: string;
   category?: string;
   description?: string;
@@ -279,8 +279,8 @@ const StudentDashboard = () => {
               .filter((eq) => !showOnlyAvailable || eq.status === "available")
               .map((equipment) => (
                 <EquipmentCard
-                  key={equipment._id}
-                  equipmentId={equipment._id}
+                  key={equipment.id}
+                  equipmentId={equipment.id}
                   name={equipment.name}
                   status={equipment.status === "broken" ? "maintenance" : equipment.status}
                   currentUser={
@@ -315,7 +315,7 @@ const StudentDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
             {announcements.length > 0 ? (
               announcements.map((ann) => (
-                <Card key={ann._id} className="animate-slide-up rounded-lg shadow-md border-l-4 border-primary">
+                <Card key={ann.id} className="animate-slide-up rounded-lg shadow-md border-l-4 border-primary">
                   <CardHeader className="p-4 pb-2">
                     <CardTitle className="text-base">{ann.heading}</CardTitle>
                   </CardHeader>
@@ -362,7 +362,7 @@ const StudentDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
               {gamesData.map((game) => (
                 <Card
-                  key={game._id}
+                  key={game.id}
                   className="border-2 rounded-lg" // Removed hover effects and cursor-pointer
                 >
                   <CardHeader className="p-4 pb-2">
@@ -420,15 +420,15 @@ const StudentDashboard = () => {
                   
                   return (
                     <PlayerCard
-                      key={player._id}
-                      playerId={player._id}
+                      key={player.id}
+                      playerId={player.id}
                       name={player.fullname}
                       available={true}
                       games={playerGames}
                       onSendRequest={handleSendRequest}
                       isSending={
                         sendMessageMutation.isPending &&
-                        sendMessageMutation.variables?.receiverId === player._id
+                        sendMessageMutation.variables?.receiverId === player.id
                       }
                     />
                   );

@@ -13,12 +13,12 @@ import { toast as sonner } from "sonner";
 
 // 1. Define the types for our data
 interface Equipment {
-  _id: string;
+  id: string;
   name: string;
   status: 'available' | 'in-use' | 'broken';
   duration?: string;
   user?: { // This user is populated from our backend fix
-    _id: string;
+    id: string;
     fullname: string;
     roll_no: string;
   };
@@ -51,7 +51,7 @@ const AdminCheckout = () => {
 
   // 5. Create a "mutation" to handle updates
   const updateEquipmentMutation = useMutation({
-    mutationFn: (variables: { status: string; equipment: { _id: string }; roll_no?: string; duration?: string }) => {
+    mutationFn: (variables: { status: string; equipment: { id: string }; roll_no?: string; duration?: string }) => {
       // Use wrapApiCall to handle auth errors
       return wrapApiCall(() => api.post("/admin/update-equipment", variables));
     },
@@ -79,7 +79,7 @@ const AdminCheckout = () => {
     }
     updateEquipmentMutation.mutate({
       status: "in-use",
-      equipment: { _id: equipmentId },
+      equipment: { id: equipmentId },
       roll_no: rollNumber,
       duration: duration,
     });
@@ -89,7 +89,7 @@ const AdminCheckout = () => {
   const handleReturn = (checkout: Equipment) => {
     updateEquipmentMutation.mutate({
       status: "available",
-      equipment: { _id: checkout._id },
+      equipment: { id: checkout.id },
     });
   };
 
@@ -158,7 +158,7 @@ const AdminCheckout = () => {
                       <SelectItem value="loading" disabled>Loading...</SelectItem>
                     ) : (
                       availableEquipment.map((item) => (
-                        <SelectItem key={item._id} value={item._id} className="capitalize">
+                        <SelectItem key={item.id} value={item.id} className="capitalize">
                           {item.name}
                         </SelectItem>
                       ))
@@ -202,7 +202,7 @@ const AdminCheckout = () => {
                 <p className="text-muted-foreground text-center">No equipment is currently checked out.</p>
               )}
               {activeCheckouts.map((checkout) => (
-                <div key={checkout._id} className="p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
+                <div key={checkout.id} className="p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold mb-1">{checkout.user?.fullname || "N/A"}</h3>

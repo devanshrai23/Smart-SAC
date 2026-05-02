@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 interface User {
-  _id: string;
+  id: string;
   fullname: string;
   email: string;
   username: string;
@@ -20,7 +20,7 @@ interface User {
 }
 
 interface Admin {
-  _id: string;
+  id: string;
   email: string;
 }
 

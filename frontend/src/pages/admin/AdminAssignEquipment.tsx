@@ -185,7 +185,7 @@ const AdminAssignEquipment = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {(equipment ?? []).map((e) => (
-                      <SelectItem key={e._id} value={e._id}>
+                      <SelectItem key={e.id} value={e.id}>
                         {e.name} - ({e.status})
                       </SelectItem>
                     ))}
@@ -306,7 +306,7 @@ const AdminAssignEquipment = () => {
                     .filter((e) => e.status === "in-use")
                     .map((e) => (
                       <div
-                        key={e._id}
+                        key={e.id}
                         className="flex justify-between items-center border p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition"
                       >
                         <div>
@@ -320,7 +320,7 @@ const AdminAssignEquipment = () => {
                         </div>
                         <Button
                           variant="destructive"
-                          onClick={() => handleUnassign(e._id)}
+                          onClick={() => handleUnassign(e.id)}
                           disabled={loading}
                         >
                           Unassign

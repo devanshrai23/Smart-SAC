@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
 
 interface EquipmentHistoryEntry {
-  _id: string;
+  id: string;
   equipment: string;
   status: string;
   user?: {
@@ -264,7 +264,7 @@ const EquipmentHistoryPage = () => {
                 <CardContent className="pt-0">
                   <div className="space-y-3">
                     {equipmentHistory?.slice(0, 3).map((entry) => (
-                      <HistoryEntry key={entry._id} entry={entry} />
+                      <HistoryEntry key={entry.id} entry={entry} />
                     ))}
                   </div>
 
@@ -280,7 +280,7 @@ const EquipmentHistoryPage = () => {
                       ) : fullHistory[equipmentName] ? (
                         <div className="space-y-3">
                           {fullHistory[equipmentName].history.map((entry) => (
-                            <HistoryEntry key={entry._id} entry={entry} />
+                            <HistoryEntry key={entry.id} entry={entry} />
                           ))}
                           
                           {/* Load More Button */}

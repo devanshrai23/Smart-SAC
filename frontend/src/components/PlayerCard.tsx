@@ -9,12 +9,12 @@ interface PlayerCardProps {
   name: string;
   games: {
     game: {
-      _id: string;
+      id: string;
       name: string;
       category?: string;
     };
     rating: number;
-    _id: string;
+    id: string;
   }[];
   available: boolean;
   onSendRequest: (playerId: string, sport: string) => void;
@@ -69,7 +69,7 @@ const PlayerCard = ({
         {/* Games with ratings */}
         <div className="space-y-3">
           {games?.slice(0, 3).map((userGame) => (
-            <div key={userGame._id} className="flex items-center justify-between">
+            <div key={userGame.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Gamepad2 className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm font-medium capitalize">

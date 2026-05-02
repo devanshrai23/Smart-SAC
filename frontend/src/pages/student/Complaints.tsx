@@ -21,7 +21,7 @@ import { Ticket } from "lucide-react";
 
 // Define types for our data
 interface ApiEquipment {
-  _id: string;
+  id: string;
   name: string;
 }
 interface DashboardData {
@@ -110,7 +110,7 @@ const Complaints = () => {
                         </SelectItem>
                       ) : (
                         equipmentData?.equipment.map((item) => (
-                          <SelectItem key={item._id} value={item._id} className="capitalize">
+                          <SelectItem key={item.id} value={item.id} className="capitalize">
                             {item.name}
                           </SelectItem>
                         ))

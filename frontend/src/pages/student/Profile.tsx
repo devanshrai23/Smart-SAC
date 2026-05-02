@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast as sonner } from "sonner";
 
 type Game = { 
-  _id: string;
+  id: string;
   name: string;
   category?: string;
 };
@@ -20,17 +20,17 @@ type Game = {
 // Updated UserGame type to match backend response
 type UserGame = { 
   game: {
-    _id: string;
+    id: string;
     name: string;
     category?: string;
   }; // Game object with details
   rating: number;
-  _id?: string; // Added this for the nested _id
+  id?: string; // Added this for the nested id
 };
 
 type UserProfileData = {
   userDetails: {
-    _id: string;
+    id: string;
     fullname: string;
     username: string;
     email: string;
@@ -39,7 +39,7 @@ type UserProfileData = {
     games: UserGame[];
     achievements: string[];
   };
-  bookedItems: { _id: string; name: string }[];
+  bookedItems: { id: string; name: string }[];
 };
 
 const StudentProfile: React.FC = () => {
@@ -121,7 +121,7 @@ const StudentProfile: React.FC = () => {
     }
 
     // Check if game already exists - updated to handle game object structure
-    const existingGameIndex = form.games.findIndex(g => g.game._id === selectedGame);
+    const existingGameIndex = form.games.findIndex(g => g.game.id === selectedGame);
     if (existingGameIndex !== -1) {
       // Update existing game rating
       const updatedGames = [...form.games];
@@ -133,7 +133,7 @@ const StudentProfile: React.FC = () => {
       sonner.success("Game rating updated");
     } else {
       // Find the selected game details from gamesData
-      const selectedGameDetails = gamesData.find(g => g._id === selectedGame);
+      const selectedGameDetails = gamesData.find(g => g.id === selectedGame);
       if (!selectedGameDetails) {
         sonner.error("Selected game not found");
         return;
@@ -157,7 +157,7 @@ const StudentProfile: React.FC = () => {
   const removeGame = (gameId: string) => {
     setForm(prev => ({ 
       ...prev, 
-      games: prev.games.filter(g => g.game._id !== gameId) 
+      games: prev.games.filter(g => g.game.id !== gameId) 
     }));
     sonner.success("Game removed");
   };
@@ -189,7 +189,7 @@ const StudentProfile: React.FC = () => {
     const backendPayload = {
       ...payload,
       games: payload.games.map(userGame => ({
-        game: userGame.game._id, // Send only the ID to backend
+        game: userGame.game.id, // Send only the ID to backend
         rating: userGame.rating
       }))
     };
@@ -380,7 +380,7 @@ const StudentProfile: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {gamesData?.map((game) => (
-                        <SelectItem key={game._id} value={game._id}>
+                        <SelectItem key={game.id} value={game.id}>
                           {game.name}
                         </SelectItem>
                       ))}
@@ -401,7 +401,7 @@ const StudentProfile: React.FC = () => {
                   </div>
                   
                   <Button onClick={addGame}>
-                    {form.games.find(g => g.game._id === selectedGame) ? "Update" : "Add"} Game
+                    {form.games.find(g => g.game.id === selectedGame) ? "Update" : "Add"} Game
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -413,7 +413,7 @@ const StudentProfile: React.FC = () => {
             {form.games.length > 0 ? (
               <div className="space-y-3">
                 {form.games.map((userGame) => (
-                  <div key={userGame.game._id} className="p-3 border rounded-md flex justify-between items-center">
+                  <div key={userGame.game.id} className="p-3 border rounded-md flex justify-between items-center">
                     <div className="font-semibold capitalize">
                       {getGameName(userGame)}
                     </div>
@@ -434,7 +434,7 @@ const StudentProfile: React.FC = () => {
                         <Button 
                           size="sm" 
                           variant="destructive" 
-                          onClick={() => removeGame(userGame.game._id)}
+                          onClick={() => removeGame(userGame.game.id)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -508,7 +508,7 @@ const StudentProfile: React.FC = () => {
             {bookedItems.length > 0 ? (
               <div className="space-y-2">
                 {bookedItems.map(item => (
-                  <div key={item._id} className="p-3 border rounded-md">
+                  <div key={item.id} className="p-3 border rounded-md">
                     {item.name}
                   </div>
                 ))}

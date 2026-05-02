@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EquipmentStatus {
+  available
+  in_use    @map("in-use")
+  broken
+}
+
+enum MessageStatus {
+  read
+  sent
+  received
+  unsent
+}
+
+enum RoomStatus {
+  available
+  occupied
+  reserved
+  maintenance
+}
+
+enum TicketStatus {
+  in_process @map("in-process")
+  open
+  closed
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model User {
+  id                       String    @id @default(cuid())
+  username                 String    @unique
+  achievements             String[]
+  emailVerificationToken   String?
+  emailVerificationExpires DateTime?
+  isVerified               Boolean   @default(false)
+  description              String?
+  email                    String    @unique
+  phone_number             String    @unique
+  fullname                 String
+  roll_no                  String
+  password                 String
+  refreshToken             String?
+  passwordResetToken       String?
+  passwordResetExpires     DateTime?
+
+  // Relations
+  games              UserGameRating[]
+  messagesSent       Message[]          @relation("MessagesSent")
+  messagesReceived   Message[]          @relation("MessagesReceived")
+  equipments         Equipment[]
+  equipmentHistories EquipmentHistory[]
+  bookedRooms        Room[]
+  tickets            Ticket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserGameRating {
+  userId String
+  gameId String
+  rating Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+}
+
+model Game {
+  id   String @id @default(cuid())
+  name String @unique
+
+  // Relations
+  users      UserGameRating[]
+  equipments Equipment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  heading   String
+  content   String
+  footer    String   @default("")
+  expireAt  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Equipment {
+  id       String          @id @default(cuid())
+  name     String          @unique
+  status   EquipmentStatus @default(available)
+  roll_no  String?
+  duration String?
+
+  // Relations
+  userId  String?
+  user    User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  games   Game[]
+  history EquipmentHistory[]
+  tickets Ticket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EquipmentHistory {
+  id        String   @id @default(cuid())
+  status    String
+  roll_no   String?
+  duration  String?
+  changedAt DateTime @default(now())
+  expireAt  DateTime
+
+  // Relations
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id      String        @id @default(cuid())
+  status  MessageStatus @default(unsent)
+  content String
+
+  // Relations
+  senderId   String
+  sender     User   @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User   @relation("MessagesReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Room {
+  id              String     @id @default(cuid())
+  name            String     @unique
+  capacity        Int        @default(0)
+  status          RoomStatus @default(available)
+  currentActivity String?
+  timeSlot        String?
+
+  // Relations
+  bookedById String?
+  bookedBy   User?   @relation(fields: [bookedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id      String       @id @default(cuid())
+  heading String
+  content String
+  footer  String?
+  status  TicketStatus @default(open)
+
+  // Relations
+  equipmentId String?
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  senderId    String
+  sender      User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -564,6 +564,13 @@ const getEquipmentHistory = asyncHandler(async (req, res) => {
   );
 });
 
+const getGames = asyncHandler(async (req, res) => {
+  const games = await prisma.game.findMany({
+    include: { equipments: { select: { id: true, name: true, status: true } } }
+  });
+  return res.status(200).json(new ApiResponse(200, games, "Games fetched successfully"));
+});
+
 export {
   loginAdmin,
   logoutAdmin,
@@ -575,6 +582,7 @@ export {
   updateEquipment,
   addGame,
   removeGame,
+  getGames,
   addEquipment,
   removeEquipment,
   makeAnnouncement,

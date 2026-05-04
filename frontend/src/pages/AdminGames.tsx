@@ -12,12 +12,12 @@ import { Gamepad2, Plus, Trash2 } from "lucide-react";
 type Game = {
   id: string;
   name: string;
-  equipment?: { id: string; name: string; status: string }[];
+  equipments?: { id: string; name: string; status: string }[];
 };
 
 const fetchAdminGames = async () => {
-  const res = await api.get("/admin/games");
-  return res.games as Game[];
+  const res = await api.get("/admin/get-games");
+  return (res.games || res) as Game[];
 };
 
 const AdminGames = () => {
@@ -96,7 +96,7 @@ const AdminGames = () => {
                 <CardContent className="space-y-3">
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary">
-                      {g.equipment?.length ?? 0} item{(g.equipment?.length ?? 0) === 1 ? "" : "s"}
+                      {g.equipments?.length ?? 0} item{(g.equipments?.length ?? 0) === 1 ? "" : "s"}
                     </Badge>
                   </div>
                   <Button

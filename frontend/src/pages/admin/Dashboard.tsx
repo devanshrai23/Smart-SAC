@@ -18,7 +18,7 @@ interface AdminDashboardData {
   equipment: {
     id: string;
     name: string;
-    status: "available" | "in-use" | "broken";
+    status: "available" | "in-use" | "in_use" | "broken";
   }[];
   announcements: {
     id: string;
@@ -34,7 +34,7 @@ interface EquipmentHistoryItem {
     status: string;
   };
   user: {
-    name: string;
+    fullname: string;
     email: string;
     roll_no: string;
   } | null;
@@ -84,12 +84,12 @@ const AdminDashboard = () => {
 
   const stats = {
     activeCheckouts:
-      data?.equipment.filter((e) => e.status === "in-use").length || 0,
+      data?.equipment?.filter((e) => e.status === "in-use" || e.status === "in_use").length || 0,
     equipmentInUse: `${
-      data?.equipment.filter((e) => e.status === "in-use").length || 0
-    }/${data?.equipment.length || 0}`,
+      data?.equipment?.filter((e) => e.status === "in-use" || e.status === "in_use").length || 0
+    }/${data?.equipment?.length || 0}`,
     equipmentBroken:
-      data?.equipment.filter((e) => e.status === "broken").length || 0,
+      data?.equipment?.filter((e) => e.status === "broken").length || 0,
   };
 
   return (
@@ -129,7 +129,10 @@ const AdminDashboard = () => {
         {/* Stats Section */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-scale-in">
           {/* Active Checkouts */}
-          <Card className="border-2 hover:shadow-lg transition-shadow">
+          <Card 
+            onClick={() => navigate("/admin/checkout")}
+            className="border-2 hover:shadow-lg hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
+          >
             <CardContent className="pt-6 pb-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -256,7 +259,7 @@ const AdminDashboard = () => {
                   Could not load announcements.
                 </p>
               )}
-              {data?.announcements.map((item) => (
+              {data?.announcements?.map((item) => (
                 <div
                   key={item.id}
                   className="p-4 rounded-lg border hover:bg-muted/30 transition"
@@ -285,7 +288,7 @@ const AdminDashboard = () => {
                   Could not load equipment.
                 </p>
               )}
-              {data?.equipment.map((item) => (
+              {data?.equipment?.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition"
@@ -295,7 +298,7 @@ const AdminDashboard = () => {
                     className={`text-sm font-semibold ${
                       item.status === "available"
                         ? "text-success"
-                        : item.status === "in-use"
+                        : (item.status === "in-use" || item.status === "in_use")
                         ? "text-warning"
                         : "text-destructive"
                     }`}
@@ -326,14 +329,15 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {historyLoading && <p>Loading equipment history...</p>}
-              {equipmentHistory?.history.length === 0 ? (
+              {historyLoading ? (
+                <p className="text-center py-6">Loading equipment history...</p>
+              ) : !equipmentHistory?.history || equipmentHistory.history.length === 0 ? (
                 <p className="text-muted-foreground text-center py-6">
                   No equipment history available.
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {equipmentHistory?.history.map((item) => (
+                  {equipmentHistory.history.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition"
@@ -347,7 +351,7 @@ const AdminDashboard = () => {
                             className={`text-sm font-semibold px-2 py-1 rounded ${
                               item.status === "available"
                                 ? "bg-green-100 text-green-800"
-                                : item.status === "in-use"
+                                : (item.status === "in-use" || item.status === "in_use")
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
                             }`}
@@ -362,7 +366,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {item.user ? (
-                            <>By: {item.user.name} ({item.user.roll_no})</>
+                            <>By: {item.user.fullname} ({item.user.roll_no})</>
                           ) : item.roll_no ? (
                             <>By: Roll No: {item.roll_no}</>
                           ) : (

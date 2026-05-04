@@ -15,7 +15,7 @@ import { toast as sonner } from "sonner";
 interface Equipment {
   id: string;
   name: string;
-  status: 'available' | 'in-use' | 'broken';
+  status: 'available' | 'in-use' | 'in_use' | 'broken';
   duration?: string;
   user?: { // This user is populated from our backend fix
     id: string;
@@ -27,10 +27,9 @@ interface Equipment {
 
 // 2. Define the fetch function
 const fetchAllEquipment = async (): Promise<Equipment[]> => {
-  // We can't use wrapApiCall from AuthContext, so we'll call api.get
-  // The admin dashboard endpoint returns all equipment
-  const data = await api.get("/admin/dashboard");
-  return data.equipment;
+  const res = await api.get("/admin/get-equipment");
+  // /admin/get-equipment returns the array directly in res.data (unwrapped by api.get)
+  return (Array.isArray(res) ? res : res.equipment || []) as Equipment[];
 };
 
 const AdminCheckout = () => {
@@ -51,7 +50,7 @@ const AdminCheckout = () => {
 
   // 5. Create a "mutation" to handle updates
   const updateEquipmentMutation = useMutation({
-    mutationFn: (variables: { status: string; equipment: { id: string }; roll_no?: string; duration?: string }) => {
+    mutationFn: (variables: { status: string; equipmentid: string; roll_no?: string; duration?: string }) => {
       // Use wrapApiCall to handle auth errors
       return wrapApiCall(() => api.post("/admin/update-equipment", variables));
     },
@@ -79,7 +78,7 @@ const AdminCheckout = () => {
     }
     updateEquipmentMutation.mutate({
       status: "in-use",
-      equipment: { id: equipmentId },
+      equipmentid: equipmentId,
       roll_no: rollNumber,
       duration: duration,
     });
@@ -89,13 +88,13 @@ const AdminCheckout = () => {
   const handleReturn = (checkout: Equipment) => {
     updateEquipmentMutation.mutate({
       status: "available",
-      equipment: { id: checkout.id },
+      equipmentid: checkout.id,
     });
   };
 
   // 8. Filter data for the UI
   const availableEquipment = equipmentList?.filter(e => e.status === 'available') || [];
-  const activeCheckouts = equipmentList?.filter(e => e.status === 'in-use') || [];
+  const activeCheckouts = equipmentList?.filter(e => e.status === 'in-use' || e.status === 'in_use') || [];
 
   return (
     <div className="min-h-screen bg-background">

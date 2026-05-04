@@ -734,7 +734,7 @@ const getConversations = asyncHandler(async (req, res) => {
   // Format the raw output to match the previous frontend structure
   const formattedConversations = conversationsRaw.map(conv => ({
     otherUser: {
-      _id: conv.otherUserId,
+      id: conv.otherUserId,
       fullname: conv.otherUser_fullname,
       sport: "N/A" // Simplified here as getting specific first game is complex in raw query
     },
@@ -770,7 +770,15 @@ const getMessages = asyncHandler(async (req, res) => {
     orderBy: { createdAt: 'asc' }
   });
 
-  return res.status(200).json(new ApiResponse(200, messages, "Messages fetched successfully"));
+  const formattedMessages = messages.map(msg => ({
+    id: msg.id,
+    sender: msg.senderId,
+    content: msg.content,
+    createdAt: msg.createdAt,
+    status: msg.status
+  }));
+
+  return res.status(200).json(new ApiResponse(200, formattedMessages, "Messages fetched successfully"));
 });
 
 const newEquipmentTicket = asyncHandler(async (req, res) => {

@@ -1,8 +1,6 @@
 import "dotenv/config";
 import { prisma } from "./db/index.js";
 
-// --- 1. Define Your Dummy Data ---
-
 const dummyRooms = [
   {
     name: "Drama Room",
@@ -28,6 +26,16 @@ const dummyRooms = [
     capacity: 25,
     status: "available",
   },
+  {
+    name: "TT Room",
+    capacity: 4,
+    status: "available",
+  },
+  {
+    name: "AMS Room",
+    capacity: 15,
+    status: "available",
+  }
 ];
 
 const dummyAnnouncements = [
@@ -116,6 +124,66 @@ const seedDatabase = async () => {
         equipments: {
           create: {
             name: "Chess Set",
+            status: "available"
+          }
+        }
+      }
+    });
+
+    await prisma.game.create({
+      data: {
+        name: "Cricket",
+        equipments: {
+          create: [
+            { name: "Cricket Bat", status: "available" },
+            { name: "Cricket Ball", status: "available" }
+          ]
+        }
+      }
+    });
+
+    await prisma.game.create({
+      data: {
+        name: "Volleyball",
+        equipments: {
+          create: {
+            name: "Volleyball",
+            status: "available"
+          }
+        }
+      }
+    });
+
+    await prisma.game.create({
+      data: {
+        name: "Basketball",
+        equipments: {
+          create: {
+            name: "Basketball",
+            status: "available"
+          }
+        }
+      }
+    });
+
+    await prisma.game.create({
+      data: {
+        name: "Lawn Tennis",
+        equipments: {
+          create: [
+            { name: "Lawn Tennis Racket", status: "available" },
+            { name: "Lawn Tennis Ball", status: "available" }
+          ]
+        }
+      }
+    });
+
+    await prisma.game.create({
+      data: {
+        name: "Football",
+        equipments: {
+          create: {
+            name: "Football",
             status: "available"
           }
         }

@@ -30,11 +30,11 @@ interface Ticket {
   id: string;
   heading: string;
   content: string;
-  status: "open" | "in-process" | "closed";
+  status: "open" | "in_process" | "in-process" | "closed";
   equipment: {
     id: string;
     name: string;
-  };
+  } | null;
   sender: {
     id: string;
     fullname: string;
@@ -44,6 +44,12 @@ interface Ticket {
   createdAt: string;
   updatedAt: string;
 }
+
+// Normalize Prisma enum status (in_process) to display format (in-process)
+const normalizeStatus = (status: string): string => {
+  if (status === "in_process") return "in-process";
+  return status;
+};
 
 const AdminTickets = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -60,8 +66,13 @@ const AdminTickets = () => {
     queryFn: async () => {
       try {
         const res = await api.get("/admin/get-active-tickets");
-        // Handle different response structures
-        return res.data?.tickets || res.tickets || res.data || res;
+        // api.get already unwraps res.data, so res is the payload directly
+        const ticketList = res.tickets || res;
+        // Normalize status values from Prisma enum format
+        return (Array.isArray(ticketList) ? ticketList : []).map((t: any) => ({
+          ...t,
+          status: normalizeStatus(t.status),
+        }));
       } catch (err: any) {
         console.error("Fetch tickets error:", err);
         const errorMessage = err?.response?.data?.message || err.message || "Failed to fetch tickets";
@@ -139,8 +150,8 @@ const AdminTickets = () => {
   const filteredTickets = tickets?.filter(ticket => {
     const matchesSearch = 
       ticket.heading.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.equipment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (ticket.sender.fullname && ticket.sender.fullname.toLowerCase().includes(searchQuery.toLowerCase()));
+      (ticket.equipment?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ticket.sender?.fullname && ticket.sender.fullname.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
     
@@ -282,10 +293,10 @@ const AdminTickets = () => {
                               </p>
                               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                 <Badge variant="outline" className="capitalize">
-                                  {ticket.equipment.name}
+                                  {ticket.equipment?.name || "New Equipment Request"}
                                 </Badge>
-                                <span>By: {ticket.sender.fullname}</span>
-                                <span>Roll No: {ticket.sender.roll_no}</span>
+                                <span>By: {ticket.sender?.fullname || "Unknown"}</span>
+                                <span>Roll No: {ticket.sender?.roll_no || "N/A"}</span>
                                 <span>
                                   {new Date(ticket.createdAt).toLocaleDateString()}
                                 </span>
@@ -348,7 +359,7 @@ const AdminTickets = () => {
                 <DialogHeader>
                   <DialogTitle>{selectedTicket.heading}</DialogTitle>
                   <DialogDescription>
-                    Equipment: {selectedTicket.equipment.name}
+                    Equipment: {selectedTicket.equipment?.name || "New Equipment Request"}
                   </DialogDescription>
                 </DialogHeader>
                 

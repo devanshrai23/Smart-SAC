@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ const AdminLogin = () => {
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +88,23 @@ const AdminLogin = () => {
               {isLoading ? "Logging in..." : "Login"}
             </Button>
           </form>
+          <p className="text-sm text-center mt-4">
+            Don't have an admin account?{" "}
+            <span
+              onClick={() => navigate("/admin/register")}
+              className="text-primary cursor-pointer hover:underline"
+            >
+              Register here
+            </span>
+          </p>
+          <p className="text-sm text-center mt-2">
+            <span
+              onClick={() => navigate("/")}
+              className="text-muted-foreground cursor-pointer hover:underline"
+            >
+              ← Back to home
+            </span>
+          </p>
         </CardContent>
       </Card>
     </div>

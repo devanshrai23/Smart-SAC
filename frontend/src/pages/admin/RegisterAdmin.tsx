@@ -87,6 +87,14 @@ const RegisterAdmin = () => {
               Login here
             </span>
           </p>
+          <p className="text-sm text-center mt-2">
+            <span
+              onClick={() => navigate("/")}
+              className="text-muted-foreground cursor-pointer hover:underline"
+            >
+              ← Back to home
+            </span>
+          </p>
         </CardContent>
       </Card>
     </div>

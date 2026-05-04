@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const endpoint =
         type === "student" ? "/users/current-user" : "/admin/current-admin";
       const userData = await api.get(endpoint);
-      setUser(userData);
+      setUser(type === "student" ? (userData?.userDetails || userData) : userData);
       setAuthType(type);
       return true;
     } 

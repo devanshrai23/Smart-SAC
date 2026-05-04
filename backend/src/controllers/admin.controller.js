@@ -166,7 +166,11 @@ const dashboardDetails = asyncHandler(async (req, res) => {
   if (!user) throw new ApiError(401, "Unauthorized");
 
   const [equipment, announcements, ticket, equipmentHistory] = await Promise.all([
-    prisma.equipment.findMany(),
+    prisma.equipment.findMany({
+      include: {
+        user: { select: { fullname: true, roll_no: true, phone_number: true } }
+      }
+    }),
     prisma.announcement.findMany({ orderBy: { createdAt: 'desc' }, take: 2 }),
     prisma.ticket.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
     prisma.equipmentHistory.findMany({
@@ -182,7 +186,7 @@ const dashboardDetails = asyncHandler(async (req, res) => {
 });
 
 const updateEquipment = asyncHandler(async (req, res) => {
-  const { status, equipmentid, roll_no, duration } = req.body;
+  const { status, equipmentid, roll_no, duration, guestName, guestPhone } = req.body;
 
   if (!status) throw new ApiError(400, "Status is required");
   if (!equipmentid) throw new ApiError(400, "Equipment ID is required");
@@ -199,39 +203,60 @@ const updateEquipment = asyncHandler(async (req, res) => {
       throw new ApiError(400, "roll_no and duration are required for in-use status");
     }
 
-    user = await prisma.user.findFirst({ where: { roll_no }});
+    user = await prisma.user.findFirst({ where: { roll_no: roll_no.toUpperCase() }});
     
+    let newUserId = null;
+    let newRollNo = roll_no;
+    let newGuestName = null;
+    let newGuestPhone = null;
+
+    if (user) {
+      registered = true;
+      newUserId = user.id;
+      newRollNo = user.roll_no;
+    } else {
+      registered = false;
+      newGuestName = guestName || null;
+      newGuestPhone = guestPhone || null;
+    }
+
+    const oldStatusStr = equipmentDoc.status === "in_use" ? "in-use" : equipmentDoc.status;
+    const transitionStatus = `${oldStatusStr} -> in-use`;
+
     await prisma.equipmentHistory.create({
       data: {
         equipmentId: equipmentDoc.id,
-        status: equipmentDoc.status,
-        userId: equipmentDoc.userId,
-        roll_no: equipmentDoc.roll_no || null,
-        duration: equipmentDoc.duration || null,
+        status: transitionStatus,
+        userId: newUserId,
+        roll_no: newRollNo,
+        duration: duration,
+        guestName: newGuestName,
+        guestPhone: newGuestPhone,
         changedAt: new Date(),
         expireAt: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000) // Approx 3 months
       }
     });
 
-    if (user) {
-      registered = true;
-      equipmentDoc.userId = user.id;
-      equipmentDoc.roll_no = user.roll_no;
-    } else {
-      registered = true;
-      equipmentDoc.userId = null;
-      equipmentDoc.roll_no = roll_no;
-    }
+    equipmentDoc.userId = newUserId;
+    equipmentDoc.roll_no = newRollNo;
+    equipmentDoc.guestName = newGuestName;
+    equipmentDoc.guestPhone = newGuestPhone;
     equipmentDoc.duration = duration;
     equipmentDoc.status = "in_use";
   } else {
+    const oldStatusStr = equipmentDoc.status === "in_use" ? "in-use" : equipmentDoc.status;
+    const newStatusStr = newStatusMap === "in_use" ? "in-use" : newStatusMap;
+    const transitionStatus = `${oldStatusStr} -> ${newStatusStr}`;
+
     await prisma.equipmentHistory.create({
       data: {
         equipmentId: equipmentDoc.id,
-        status: equipmentDoc.status,
+        status: transitionStatus,
         userId: equipmentDoc.userId,
         roll_no: equipmentDoc.roll_no || null,
         duration: equipmentDoc.duration || null,
+        guestName: equipmentDoc.guestName || null,
+        guestPhone: equipmentDoc.guestPhone || null,
         changedAt: new Date(),
         expireAt: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000)
       }
@@ -240,6 +265,8 @@ const updateEquipment = asyncHandler(async (req, res) => {
     equipmentDoc.userId = null;
     equipmentDoc.duration = null;
     equipmentDoc.roll_no = null;
+    equipmentDoc.guestName = null;
+    equipmentDoc.guestPhone = null;
     equipmentDoc.status = newStatusMap;
   }
 
@@ -249,6 +276,8 @@ const updateEquipment = asyncHandler(async (req, res) => {
       userId: equipmentDoc.userId,
       duration: equipmentDoc.duration,
       roll_no: equipmentDoc.roll_no,
+      guestName: equipmentDoc.guestName,
+      guestPhone: equipmentDoc.guestPhone,
       status: equipmentDoc.status
     }
   });
@@ -262,8 +291,37 @@ const updateEquipment = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, responseData, "Equipment updated successfully"));
 });
 
+const getUserByRollNo = asyncHandler(async (req, res) => {
+  const { rollNo } = req.params;
+  if (!rollNo) throw new ApiError(400, "Roll number is required");
+
+  const user = await prisma.user.findFirst({
+    where: { roll_no: rollNo.toUpperCase() }
+  });
+
+  if (!user) {
+    return res.status(200).json(new ApiResponse(200, { found: false }, "User not found"));
+  }
+
+  // omit sensitive data
+  delete user.password;
+  delete user.refreshToken;
+
+  return res.status(200).json(new ApiResponse(200, { found: true, user }, "User found"));
+});
+
 const getEquipment = asyncHandler(async (req, res) => {
-  const equipments = await prisma.equipment.findMany();
+  const equipments = await prisma.equipment.findMany({
+    include: {
+      user: {
+        select: {
+          fullname: true,
+          roll_no: true,
+          phone_number: true,
+        }
+      }
+    }
+  });
   return res.status(200).json(new ApiResponse(200, equipments, "Equipments fetched successfully"));
 });
 
@@ -596,5 +654,6 @@ export {
   getEquipmentRecentHistoryDict,
   getNoOfEquipmentHistory,
   getEquipmentHistory,
-  getEquipment
+  getEquipment,
+  getUserByRollNo
 };

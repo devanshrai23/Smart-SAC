@@ -35,6 +35,45 @@ const AdminAssignEquipment = () => {
   const [showInUseModal, setShowInUseModal] = useState(false);
   const [rollNo, setRollNo] = useState("");
   const [duration, setDuration] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [isUserRegistered, setIsUserRegistered] = useState<boolean | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const verifyRollNumber = async (silent = false) => {
+    if (!rollNo) return;
+    setIsVerifying(true);
+    try {
+      const res = await wrapApiCall(() => api.get(`/admin/get-user-by-roll/${rollNo}`));
+      if (res?.found) {
+        setIsUserRegistered(true);
+        setGuestName(res.user.fullname);
+        setGuestPhone(res.user.phone_number);
+        if (!silent) toast.success(`Found user: ${res.user.fullname}`);
+      } else {
+        setIsUserRegistered(false);
+        setGuestName("");
+        setGuestPhone("");
+        if (!silent) toast.info("Unregistered User. Please enter name and phone number.");
+      }
+    } catch (error) {
+      console.error("Error verifying roll number:", error);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (rollNo && rollNo.length >= 3) {
+        verifyRollNumber(true);
+      } else if (!rollNo) {
+        setIsUserRegistered(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [rollNo]);
 
   // Fetch equipment safely
   useEffect(() => {
@@ -65,7 +104,7 @@ const AdminAssignEquipment = () => {
   };
 
   // Update equipment status
-  const updateEquipmentStatus = async (status: string, roll_no?: string, durationValue?: string) => {
+  const updateEquipmentStatus = async (status: string, roll_no?: string, durationValue?: string, guestNameValue?: string, guestPhoneValue?: string) => {
     if (!selectedEquipment) {
       toast.error("Please select equipment first");
       return;
@@ -85,6 +124,8 @@ const AdminAssignEquipment = () => {
         }
         payload.roll_no = roll_no;
         payload.duration = durationValue;
+        payload.guestName = guestNameValue;
+        payload.guestPhone = guestPhoneValue;
       }
 
       console.log("Sending payload:", payload);
@@ -100,6 +141,9 @@ const AdminAssignEquipment = () => {
       setSelectedStatus("");
       setRollNo("");
       setDuration("");
+      setGuestName("");
+      setGuestPhone("");
+      setIsUserRegistered(null);
       setShowInUseModal(false);
     } catch (err: any) {
       console.error("Update equipment error:", err);
@@ -115,7 +159,11 @@ const AdminAssignEquipment = () => {
       toast.error("Please fill in both roll number and duration");
       return;
     }
-    updateEquipmentStatus("in-use", rollNo.trim(), duration.trim());
+    if (isUserRegistered === false && (!guestName.trim() || !guestPhone.trim())) {
+      toast.error("Please provide name and phone for unregistered users");
+      return;
+    }
+    updateEquipmentStatus("in-use", rollNo.trim(), duration.trim(), guestName.trim(), guestPhone.trim());
   };
 
   const handleUnassign = async (equipmentId: string) => {
@@ -241,13 +289,40 @@ const AdminAssignEquipment = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="rollNo">Roll Number *</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="rollNo"
+                    type="text"
+                    value={rollNo}
+                    onChange={(e) => {
+                      setRollNo(e.target.value);
+                      setIsUserRegistered(null);
+                    }}
+                    placeholder="Enter roll number"
+                    required
+                  />
+                  <Button type="button" onClick={verifyRollNumber} disabled={isVerifying || !rollNo}>
+                    {isVerifying ? "..." : "Verify"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2 animate-fade-in">
+                <Label htmlFor="guestName">Name *</Label>
                 <Input
-                  id="rollNo"
-                  type="text"
-                  value={rollNo}
-                  onChange={(e) => setRollNo(e.target.value)}
-                  placeholder="Enter roll number"
-                  required
+                  id="guestName"
+                  placeholder="e.g., John Doe"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 animate-fade-in">
+                <Label htmlFor="guestPhone">Phone Number *</Label>
+                <Input
+                  id="guestPhone"
+                  placeholder="e.g., +91 9876543210"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
                 />
               </div>
               
@@ -271,6 +346,9 @@ const AdminAssignEquipment = () => {
                   setShowInUseModal(false);
                   setRollNo("");
                   setDuration("");
+                  setGuestName("");
+                  setGuestPhone("");
+                  setIsUserRegistered(null);
                 }}
                 disabled={loading}
               >
@@ -296,14 +374,14 @@ const AdminAssignEquipment = () => {
             </CardHeader>
 
             <CardContent>
-              {(equipment ?? []).filter((e) => e.status === "in-use").length === 0 ? (
+              {(equipment ?? []).filter((e) => e.status === "in-use" || e.status === "in_use").length === 0 ? (
                 <p className="text-muted-foreground text-center py-6">
                   No active assignments
                 </p>
               ) : (
                 <div className="space-y-3">
                   {(equipment ?? [])
-                    .filter((e) => e.status === "in-use")
+                    .filter((e) => e.status === "in-use" || e.status === "in_use")
                     .map((e) => (
                       <div
                         key={e.id}
@@ -311,8 +389,12 @@ const AdminAssignEquipment = () => {
                       >
                         <div>
                           <p className="font-semibold text-foreground">{e.name}</p>
+                          <p className="text-sm font-medium text-foreground mb-1">
+                            {e.user?.fullname || e.guestName || "N/A"}
+                          </p>
                           <p className="text-sm text-muted-foreground">
-                            Assigned to: {e.roll_no || "Unknown"}
+                            Roll No: {e.user?.roll_no || e.roll_no || "Unknown"}
+                            {(e.user?.phone_number || e.guestPhone) && ` • ${e.user?.phone_number || e.guestPhone}`}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Duration: {e.duration || "Not specified"}

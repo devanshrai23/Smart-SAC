@@ -107,8 +107,10 @@ model Equipment {
   id       String          @id @default(cuid())
   name     String          @unique
   status   EquipmentStatus @default(available)
-  roll_no  String?
-  duration String?
+  roll_no    String?
+  duration   String?
+  guestName  String?
+  guestPhone String?
 
   // Relations
   userId  String?
@@ -124,9 +126,11 @@ model Equipment {
 model EquipmentHistory {
   id        String   @id @default(cuid())
   status    String
-  roll_no   String?
-  duration  String?
-  changedAt DateTime @default(now())
+  roll_no    String?
+  duration   String?
+  guestName  String?
+  guestPhone String?
+  changedAt  DateTime @default(now())
   expireAt  DateTime
 
   // Relations

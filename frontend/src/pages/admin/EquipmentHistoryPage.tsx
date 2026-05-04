@@ -320,24 +320,24 @@ const EquipmentHistoryPage = () => {
 // Component for individual history entry
 const HistoryEntry = ({ entry }: { entry: EquipmentHistoryEntry }) => {
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-green-100 text-green-800";
-      case "in-use":
-        return "bg-yellow-100 text-yellow-800";
-      case "broken":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+    if (status.includes("in-use") || status.includes("in_use")) {
+      return "bg-yellow-100 text-yellow-800";
     }
+    if (status.includes("available")) {
+      return "bg-green-100 text-green-800";
+    }
+    if (status.includes("broken")) {
+      return "bg-red-100 text-red-800";
+    }
+    return "bg-gray-100 text-gray-800";
   };
 
   // Safe access to user properties
   const getUserDisplay = () => {
     if (entry.user) {
-      return `By: ${entry.user.name || 'Unknown'} (${entry.user.roll_no || 'No roll number'})`;
-    } else if (entry.roll_no) {
-      return `By: Roll No: ${entry.roll_no}`;
+      return `By: ${entry.user.fullname || entry.user.name || 'Unknown'} (${entry.user.roll_no || 'No roll number'})`;
+    } else if (entry.guestName || entry.roll_no) {
+      return `By: ${entry.guestName || 'Unknown'} (${entry.roll_no || 'No roll number'})`;
     } else {
       return "System";
     }

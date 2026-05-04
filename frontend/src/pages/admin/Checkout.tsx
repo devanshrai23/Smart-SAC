@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, ArrowLeft, CheckCircle, Clock, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,9 @@ interface Equipment {
   name: string;
   status: 'available' | 'in-use' | 'in_use' | 'broken';
   duration?: string;
+  guestName?: string | null;
+  guestPhone?: string | null;
+  roll_no?: string | null;
   user?: { // This user is populated from our backend fix
     id: string;
     fullname: string;
@@ -41,6 +44,45 @@ const AdminCheckout = () => {
   const [rollNumber, setRollNumber] = useState("");
   const [equipmentId, setEquipmentId] = useState("");
   const [duration, setDuration] = useState("1h"); // Default duration
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [isUserRegistered, setIsUserRegistered] = useState<boolean | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const verifyRollNumber = async (silent = false) => {
+    if (!rollNumber) return;
+    setIsVerifying(true);
+    try {
+      const res = await wrapApiCall(() => api.get(`/admin/get-user-by-roll/${rollNumber}`));
+      if (res?.found) {
+        setIsUserRegistered(true);
+        setGuestName(res.user.fullname);
+        setGuestPhone(res.user.phone_number);
+        if (!silent) sonner.success("User Found", { description: `Found user: ${res.user.fullname}` });
+      } else {
+        setIsUserRegistered(false);
+        setGuestName("");
+        setGuestPhone("");
+        if (!silent) sonner.info("Unregistered User", { description: "Please enter name and phone number." });
+      }
+    } catch (error) {
+      console.error("Error verifying roll number:", error);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (rollNumber && rollNumber.length >= 3) {
+        verifyRollNumber(true);
+      } else if (!rollNumber) {
+        setIsUserRegistered(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [rollNumber]);
 
   // 4. Fetch all equipment data
   const { data: equipmentList, isLoading } = useQuery({
@@ -50,7 +92,7 @@ const AdminCheckout = () => {
 
   // 5. Create a "mutation" to handle updates
   const updateEquipmentMutation = useMutation({
-    mutationFn: (variables: { status: string; equipmentid: string; roll_no?: string; duration?: string }) => {
+    mutationFn: (variables: { status: string; equipmentid: string; roll_no?: string; duration?: string; guestName?: string; guestPhone?: string; }) => {
       // Use wrapApiCall to handle auth errors
       return wrapApiCall(() => api.post("/admin/update-equipment", variables));
     },
@@ -61,6 +103,9 @@ const AdminCheckout = () => {
       // Clear the form
       setRollNumber("");
       setEquipmentId("");
+      setGuestName("");
+      setGuestPhone("");
+      setIsUserRegistered(null);
     },
     onError: (error) => {
       // Error toast is already handled by api.ts
@@ -76,11 +121,19 @@ const AdminCheckout = () => {
       });
       return;
     }
+    if (isUserRegistered === false && (!guestName || !guestPhone)) {
+      sonner.error("Missing Information", {
+        description: "Please provide name and phone for unregistered users.",
+      });
+      return;
+    }
     updateEquipmentMutation.mutate({
       status: "in-use",
       equipmentid: equipmentId,
       roll_no: rollNumber,
       duration: duration,
+      guestName: guestName,
+      guestPhone: guestPhone,
     });
   };
 
@@ -138,11 +191,38 @@ const AdminCheckout = () => {
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="rollNumber">Student Roll Number</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="rollNumber"
+                    placeholder="e.g., CSE-21-042"
+                    value={rollNumber}
+                    onChange={(e) => {
+                      setRollNumber(e.target.value);
+                      setIsUserRegistered(null); // reset when typing
+                    }}
+                  />
+                  <Button type="button" onClick={verifyRollNumber} disabled={isVerifying || !rollNumber}>
+                    {isVerifying ? "..." : "Verify"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2 animate-fade-in">
+                <Label htmlFor="guestName">Name</Label>
                 <Input
-                  id="rollNumber"
-                  placeholder="e.g., CSE-21-042"
-                  value={rollNumber}
-                  onChange={(e) => setRollNumber(e.target.value)}
+                  id="guestName"
+                  placeholder="e.g., John Doe"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 animate-fade-in">
+                <Label htmlFor="guestPhone">Phone Number</Label>
+                <Input
+                  id="guestPhone"
+                  placeholder="e.g., +91 9876543210"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
                 />
               </div>
 
@@ -204,8 +284,11 @@ const AdminCheckout = () => {
                 <div key={checkout.id} className="p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold mb-1">{checkout.user?.fullname || "N/A"}</h3>
-                      <p className="text-sm text-muted-foreground mb-1">{checkout.user?.roll_no || "N/A"}</p>
+                      <h3 className="font-semibold mb-1">{checkout.user?.fullname || checkout.guestName || "N/A"}</h3>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {checkout.user?.roll_no || checkout.roll_no || "N/A"} 
+                        {(checkout.user?.phone_number || checkout.guestPhone) && ` • ${checkout.user?.phone_number || checkout.guestPhone}`}
+                      </p>
                       <p className="text-sm font-medium capitalize">{checkout.name}</p>
                     </div>
                   </div>

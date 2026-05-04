@@ -12,6 +12,7 @@ import {
   removeEquipment,
   addGame,
   removeGame,
+  getGames,
   getActiveTickets,
   updateTicket,
   getNoOfActiveTickets,
@@ -40,6 +41,7 @@ router.route("/update-account-details").post(verifyJWT, updateAccountDetails);
 router.route("/update-equipment").post(verifyJWT, updateEquipment);
 router.route("/add-game").post(verifyJWT, addGame);
 router.route("/remove-game").post(verifyJWT, removeGame);
+router.route("/get-games").get(verifyJWT, getGames);
 router.route("/add-equipment").post(verifyJWT, addEquipment);
 router.route("/remove-equipment").post(verifyJWT, removeEquipment);
 router.route("/get-active-tickets").get(verifyJWT, getActiveTickets);

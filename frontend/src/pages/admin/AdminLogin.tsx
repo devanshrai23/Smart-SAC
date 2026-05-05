@@ -38,6 +38,7 @@ const AdminLogin = () => {
         error?.response?.data?.message ||
         "Login failed. Please check your credentials.";
       setErrorMsg(message);
+      setPassword(""); // Reset password on failure
     } finally {
       setIsLoading(false);
     }

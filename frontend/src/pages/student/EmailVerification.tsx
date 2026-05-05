@@ -67,7 +67,7 @@ const EmailVerification = () => {
 
     setIsLoading(true);
     try {
-      await api.post("/users/resend-verification", {
+      await api.post("/users/resend-verification-email", {
         email: formData.email,
       });
       

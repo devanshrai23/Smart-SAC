@@ -19,12 +19,7 @@ enum MessageStatus {
   unsent
 }
 
-enum RoomStatus {
-  available
-  occupied
-  reserved
-  maintenance
-}
+
 
 enum TicketStatus {
   in_process @map("in-process")
@@ -64,10 +59,24 @@ model User {
   equipments         Equipment[]
   equipmentHistories EquipmentHistory[]
   bookedRooms        Room[]
+  roomHistories      RoomHistory[]
   tickets            Ticket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PendingUser {
+  id                       String    @id @default(cuid())
+  username                 String
+  email                    String    @unique
+  phone_number             String
+  fullname                 String
+  roll_no                  String
+  password                 String
+  emailVerificationToken   String
+  emailVerificationExpires DateTime
+  createdAt                DateTime  @default(now())
 }
 
 model UserGameRating {
@@ -159,16 +168,38 @@ model Message {
 }
 
 model Room {
-  id              String     @id @default(cuid())
-  name            String     @unique
-  capacity        Int        @default(0)
-  status          RoomStatus @default(available)
-  currentActivity String?
-  timeSlot        String?
+  id         String          @id @default(cuid())
+  name       String          @unique
+  status     EquipmentStatus @default(available)
+  roll_no    String?
+  duration   String?
+  guestName  String?
+  guestPhone String?
 
   // Relations
-  bookedById String?
-  bookedBy   User?   @relation(fields: [bookedById], references: [id], onDelete: SetNull)
+  userId  String?
+  user    User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  history RoomHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RoomHistory {
+  id         String   @id @default(cuid())
+  status     String
+  roll_no    String?
+  duration   String?
+  guestName  String?
+  guestPhone String?
+  changedAt  DateTime @default(now())
+  expireAt   DateTime
+
+  // Relations
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -47,7 +47,7 @@ const registerAdmin = asyncHandler(async (req, res) => {
   }
 
   const admin = await prisma.admin.create({ data: { email: email.toLowerCase() } });
-  
+
   const usercheck = await prisma.admin.findUnique({
     where: { id: admin.id },
     select: { id: true, email: true, createdAt: true, updatedAt: true }
@@ -114,7 +114,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   try {
     const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
 
-    const admin = await prisma.admin.findUnique({ where: { id: decodedToken?._id || decodedToken?.id }});
+    const admin = await prisma.admin.findUnique({ where: { id: decodedToken?._id || decodedToken?.id } });
     if (!admin) {
       throw new ApiError(401, "Invalid refresh token");
     }
@@ -171,7 +171,7 @@ const dashboardDetails = asyncHandler(async (req, res) => {
         user: { select: { fullname: true, roll_no: true, phone_number: true } }
       }
     }),
-    prisma.announcement.findMany({ orderBy: { createdAt: 'desc' }, take: 2 }),
+    prisma.announcement.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
     prisma.ticket.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
     prisma.equipmentHistory.findMany({
       orderBy: { changedAt: 'desc' },
@@ -191,7 +191,7 @@ const updateEquipment = asyncHandler(async (req, res) => {
   if (!status) throw new ApiError(400, "Status is required");
   if (!equipmentid) throw new ApiError(400, "Equipment ID is required");
 
-  const equipmentDoc = await prisma.equipment.findUnique({ where: { id: equipmentid }});
+  const equipmentDoc = await prisma.equipment.findUnique({ where: { id: equipmentid } });
   if (!equipmentDoc) throw new ApiError(404, "Equipment not found");
 
   let user = null;
@@ -203,8 +203,8 @@ const updateEquipment = asyncHandler(async (req, res) => {
       throw new ApiError(400, "roll_no and duration are required for in-use status");
     }
 
-    user = await prisma.user.findFirst({ where: { roll_no: roll_no.toUpperCase() }});
-    
+    user = await prisma.user.findFirst({ where: { roll_no: roll_no.toUpperCase() } });
+
     let newUserId = null;
     let newRollNo = roll_no;
     let newGuestName = null;
@@ -216,8 +216,15 @@ const updateEquipment = asyncHandler(async (req, res) => {
       newRollNo = user.roll_no;
     } else {
       registered = false;
-      newGuestName = guestName || null;
-      newGuestPhone = guestPhone || null;
+      if (!guestName || !guestPhone) {
+        throw new ApiError(400, "Name and phone number are required for unregistered users");
+      }
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(guestPhone)) {
+        throw new ApiError(400, "Phone number must be 10 digits");
+      }
+      newGuestName = guestName;
+      newGuestPhone = guestPhone;
     }
 
     const oldStatusStr = equipmentDoc.status === "in_use" ? "in-use" : equipmentDoc.status;
@@ -291,6 +298,119 @@ const updateEquipment = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, responseData, "Equipment updated successfully"));
 });
 
+const updateRoom = asyncHandler(async (req, res) => {
+  const { status, equipmentid: roomId, roll_no, duration, guestName, guestPhone } = req.body;
+
+  if (!status) throw new ApiError(400, "Status is required");
+  if (!roomId) throw new ApiError(400, "Room ID is required");
+
+  const roomDoc = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!roomDoc) throw new ApiError(404, "Room not found");
+
+  let user = null;
+  let registered = false;
+  let newStatusMap = status === "in-use" ? "in_use" : status;
+
+  if (status === "in-use") {
+    if (!roll_no || !duration) {
+      throw new ApiError(400, "roll_no and duration are required for in-use status");
+    }
+
+    user = await prisma.user.findFirst({ where: { roll_no: roll_no.toUpperCase() } });
+
+    let newUserId = null;
+    let newRollNo = roll_no;
+    let newGuestName = null;
+    let newGuestPhone = null;
+
+    if (user) {
+      registered = true;
+      newUserId = user.id;
+      newRollNo = user.roll_no;
+    } else {
+      registered = false;
+      if (!guestName || !guestPhone) {
+        throw new ApiError(400, "Name and phone number are required for unregistered users");
+      }
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(guestPhone)) {
+        throw new ApiError(400, "Phone number must be 10 digits");
+      }
+      newGuestName = guestName;
+      newGuestPhone = guestPhone;
+    }
+
+    const oldStatusStr = roomDoc.status === "in_use" ? "in-use" : roomDoc.status;
+    const transitionStatus = `${oldStatusStr} -> in-use`;
+
+    await prisma.roomHistory.create({
+      data: {
+        roomId: roomDoc.id,
+        status: transitionStatus,
+        userId: newUserId,
+        roll_no: newRollNo,
+        duration: duration,
+        guestName: newGuestName,
+        guestPhone: newGuestPhone,
+        changedAt: new Date(),
+        expireAt: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000) // Approx 3 months
+      }
+    });
+
+    roomDoc.userId = newUserId;
+    roomDoc.roll_no = newRollNo;
+    roomDoc.guestName = newGuestName;
+    roomDoc.guestPhone = newGuestPhone;
+    roomDoc.duration = duration;
+    roomDoc.status = "in_use";
+  } else {
+    const oldStatusStr = roomDoc.status === "in_use" ? "in-use" : roomDoc.status;
+    const newStatusStr = newStatusMap === "in_use" ? "in-use" : newStatusMap;
+    const transitionStatus = `${oldStatusStr} -> ${newStatusStr}`;
+
+    await prisma.roomHistory.create({
+      data: {
+        roomId: roomDoc.id,
+        status: transitionStatus,
+        userId: roomDoc.userId,
+        roll_no: roomDoc.roll_no || null,
+        duration: roomDoc.duration || null,
+        guestName: roomDoc.guestName || null,
+        guestPhone: roomDoc.guestPhone || null,
+        changedAt: new Date(),
+        expireAt: new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000)
+      }
+    });
+
+    roomDoc.userId = null;
+    roomDoc.duration = null;
+    roomDoc.roll_no = null;
+    roomDoc.guestName = null;
+    roomDoc.guestPhone = null;
+    roomDoc.status = newStatusMap;
+  }
+
+  const updatedRoom = await prisma.room.update({
+    where: { id: roomDoc.id },
+    data: {
+      userId: roomDoc.userId,
+      duration: roomDoc.duration,
+      roll_no: roomDoc.roll_no,
+      guestName: roomDoc.guestName,
+      guestPhone: roomDoc.guestPhone,
+      status: roomDoc.status
+    }
+  });
+
+  const responseData = {
+    equipment: updatedRoom,
+    registered,
+    user: user ? user : { roll_no },
+  };
+
+  return res.status(200).json(new ApiResponse(200, responseData, "Room updated successfully"));
+});
+
 const getUserByRollNo = asyncHandler(async (req, res) => {
   const { rollNo } = req.params;
   if (!rollNo) throw new ApiError(400, "Roll number is required");
@@ -323,6 +443,21 @@ const getEquipment = asyncHandler(async (req, res) => {
     }
   });
   return res.status(200).json(new ApiResponse(200, equipments, "Equipments fetched successfully"));
+});
+
+const getRooms = asyncHandler(async (req, res) => {
+  const rooms = await prisma.room.findMany({
+    include: {
+      user: {
+        select: {
+          fullname: true,
+          roll_no: true,
+          phone_number: true,
+        }
+      }
+    }
+  });
+  return res.status(200).json(new ApiResponse(200, rooms, "Rooms fetched successfully"));
 });
 
 const addGame = asyncHandler(async (req, res) => {
@@ -396,7 +531,7 @@ const removeEquipment = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Game not found");
   }
 
-  const equipment = await prisma.equipment.findUnique({ where: { name: String(name).toLowerCase().trim() }});
+  const equipment = await prisma.equipment.findUnique({ where: { name: String(name).toLowerCase().trim() } });
   if (!equipment) {
     throw new ApiError(404, "Equipment not found");
   }
@@ -410,8 +545,8 @@ const removeEquipment = asyncHandler(async (req, res) => {
     where: { id: game.id },
     data: { equipments: { disconnect: { id: equipment.id } } }
   });
-  
-  await prisma.equipment.delete({ where: { id: equipment.id }});
+
+  await prisma.equipment.delete({ where: { id: equipment.id } });
 
   const updatedGame = await prisma.game.findUnique({ where: { id: game.id }, include: { equipments: true } });
 
@@ -478,7 +613,7 @@ const getNoOfAnnouncements = asyncHandler(async (req, res) => {
 const deleteAnnouncement = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const announcement = await prisma.announcement.findUnique({ where: { id }});
+  const announcement = await prisma.announcement.findUnique({ where: { id } });
   if (!announcement) {
     throw new ApiError(404, "Announcement not found");
   }
@@ -494,7 +629,7 @@ const updateTicket = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Ticket ID and new status are required");
   }
 
-  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }});
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) {
     throw new ApiError(404, "Ticket not found");
   }
@@ -566,7 +701,7 @@ const getRecentEquipmentHistory = asyncHandler(async (req, res) => {
 });
 
 const getEquipmentRecentHistoryDict = asyncHandler(async (req, res) => {
-  const equipments = await prisma.equipment.findMany({ select: { id: true, name: true }});
+  const equipments = await prisma.equipment.findMany({ select: { id: true, name: true } });
 
   const equipmentHistoryDict = {};
 
@@ -588,10 +723,10 @@ const getEquipmentRecentHistoryDict = asyncHandler(async (req, res) => {
 const getNoOfEquipmentHistory = asyncHandler(async (req, res) => {
   const { equipmentId } = req.params;
 
-  const equipment = await prisma.equipment.findUnique({ where: { id: equipmentId }});
+  const equipment = await prisma.equipment.findUnique({ where: { id: equipmentId } });
   if (!equipment) throw new ApiError(404, "Equipment not found");
 
-  const totalHistory = await prisma.equipmentHistory.count({ where: { equipmentId }});
+  const totalHistory = await prisma.equipmentHistory.count({ where: { equipmentId } });
   const limit = 10;
   const totalPages = Math.ceil(totalHistory / limit);
 
@@ -606,7 +741,7 @@ const getEquipmentHistory = asyncHandler(async (req, res) => {
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const equipment = await prisma.equipment.findUnique({ where: { id: equipmentId }});
+  const equipment = await prisma.equipment.findUnique({ where: { id: equipmentId } });
   if (!equipment) throw new ApiError(404, "Equipment not found");
 
   const history = await prisma.equipmentHistory.findMany({
@@ -655,5 +790,7 @@ export {
   getNoOfEquipmentHistory,
   getEquipmentHistory,
   getEquipment,
-  getUserByRollNo
+  getUserByRollNo,
+  getRooms,
+  updateRoom
 };

@@ -33,29 +33,17 @@ const EquipmentCard = ({
   isBooking = false,
 }: EquipmentCardProps) => {
   const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "available":
-        return "default";
-      case "in-use":
-        return "secondary";
-      case "maintenance":
-        return "destructive";
-      default:
-        return "outline";
-    }
+    if (status === "available") return "default";
+    if (status === "in-use" || status === "in_use") return "secondary";
+    if (status === "maintenance") return "destructive";
+    return "outline";
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case "available":
-        return "Available";
-      case "in-use":
-        return "In Use";
-      case "maintenance":
-        return "Under Maintenance";
-      default:
-        return status;
-    }
+    if (status === "available") return "Available";
+    if (status === "in-use" || status === "in_use") return "In Use";
+    if (status === "maintenance") return "Under Maintenance";
+    return status;
   };
 
   return (
@@ -63,7 +51,7 @@ const EquipmentCard = ({
       className={`relative overflow-hidden border-2 transition-all hover:shadow-lg ${
         status === "available" 
           ? "border-green-200 hover:border-green-300" 
-          : status === "in-use"
+          : (status === "in-use" || status === "in_use")
           ? "border-yellow-200 hover:border-yellow-300"
           : "border-red-200 hover:border-red-300"
       }`}
@@ -73,7 +61,7 @@ const EquipmentCard = ({
         className={`absolute top-0 left-0 w-full h-1 ${
           status === "available"
             ? "bg-green-500"
-            : status === "in-use"
+            : (status === "in-use" || status === "in_use")
             ? "bg-yellow-500"
             : "bg-red-500"
         }`}
@@ -86,7 +74,7 @@ const EquipmentCard = ({
               className={`p-2 rounded-lg ${
                 status === "available"
                   ? "bg-green-500"
-                  : status === "in-use"
+                  : (status === "in-use" || status === "in_use")
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}
@@ -110,7 +98,7 @@ const EquipmentCard = ({
 
       <CardContent className="space-y-3">
         {/* Current User Info - ALWAYS show when in-use */}
-        {status === "in-use" && (
+        {(status === "in-use" || status === "in_use") && (
           <div className="space-y-2">
             {/* Current User */}
             {currentUser && (
@@ -166,7 +154,7 @@ const EquipmentCard = ({
                 {isBooking ? "Booking..." : "Book Now"}
               </Button>
             )
-          ) : status === "in-use" ? (
+          ) : (status === "in-use" || status === "in_use") ? (
             <div className="text-center">
               <p className="text-sm text-muted-foreground">
                 Currently in use

@@ -133,7 +133,7 @@ const StudentRegister = () => {
   const handleResendCode = async () => {
     setIsLoading(true);
     try {
-      await api.post("/users/resend-verification", {
+      await api.post("/users/resend-verification-email", {
         email: verificationData.email,
       });
       

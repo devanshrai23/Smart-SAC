@@ -25,7 +25,9 @@ import {
   getNoOfEquipmentHistory,
   getRecentEquipmentHistory,
   getNoOfAnnouncements,
-  getUserByRollNo
+  getUserByRollNo,
+  getRooms,
+  updateRoom
 } from "../controllers/admin.controller.js";
 
 import { verifyJWT } from "../middlewares/authadmin.middleware.js";
@@ -58,5 +60,7 @@ router.route("/get-no-of-equipment-history/:equipmentId").get(verifyJWT, getNoOf
 router.route("/get-recent-equipment-history").get(verifyJWT, getRecentEquipmentHistory);
 router.route("/get-no-of-announcements").get(verifyJWT, getNoOfAnnouncements);
 router.route("/get-user-by-roll/:rollNo").get(verifyJWT, getUserByRollNo);
+router.route("/get-rooms").get(verifyJWT, getRooms);
+router.route("/update-room").post(verifyJWT, updateRoom);
 
 export default router;

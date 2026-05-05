@@ -279,11 +279,15 @@ const StudentProfile: React.FC = () => {
                   value={form.username} 
                   onChange={(e) => handleChange("username", e.target.value)} 
                   placeholder="Username"
+                  disabled
+                  className="opacity-60 cursor-not-allowed"
                 />
                 <Input 
                   value={form.roll_no} 
                   onChange={(e) => handleChange("roll_no", e.target.value)} 
                   placeholder="Roll Number"
+                  disabled
+                  className="opacity-60 cursor-not-allowed"
                 />
                 
                 <Input 

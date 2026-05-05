@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, ArrowLeft, CheckCircle, Clock, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
@@ -29,14 +29,17 @@ interface Equipment {
 }
 
 // 2. Define the fetch function
-const fetchAllEquipment = async (): Promise<Equipment[]> => {
-  const res = await api.get("/admin/get-equipment");
-  // /admin/get-equipment returns the array directly in res.data (unwrapped by api.get)
-  return (Array.isArray(res) ? res : res.equipment || []) as Equipment[];
+const fetchData = async (isRoomMode: boolean): Promise<Equipment[]> => {
+  const endpoint = isRoomMode ? "/admin/get-rooms" : "/admin/get-equipment";
+  const res = await api.get(endpoint);
+  return (Array.isArray(res) ? res : res.equipment || res.rooms || res.data || []) as Equipment[];
 };
 
 const AdminCheckout = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filterMode = searchParams.get('filter'); // 'room' or null
+  const isRoomMode = filterMode === 'room';
   const { wrapApiCall } = useAuth();
   const queryClient = useQueryClient();
 
@@ -84,22 +87,22 @@ const AdminCheckout = () => {
     return () => clearTimeout(timer);
   }, [rollNumber]);
 
-  // 4. Fetch all equipment data
+  // 4. Fetch all data
   const { data: equipmentList, isLoading } = useQuery({
-    queryKey: ["allEquipment"],
-    queryFn: fetchAllEquipment,
+    queryKey: ["checkoutData", isRoomMode],
+    queryFn: () => fetchData(isRoomMode),
   });
 
   // 5. Create a "mutation" to handle updates
   const updateEquipmentMutation = useMutation({
     mutationFn: (variables: { status: string; equipmentid: string; roll_no?: string; duration?: string; guestName?: string; guestPhone?: string; }) => {
-      // Use wrapApiCall to handle auth errors
-      return wrapApiCall(() => api.post("/admin/update-equipment", variables));
+      const endpoint = isRoomMode ? "/admin/update-room" : "/admin/update-equipment";
+      return wrapApiCall(() => api.post(endpoint, variables));
     },
     onSuccess: (data: any) => {
       sonner.success("Success", { description: data.message || "Equipment updated!" });
       // This is the magic: it tells react-query to re-fetch the data
-      queryClient.invalidateQueries({ queryKey: ["allEquipment"] });
+      queryClient.invalidateQueries({ queryKey: ["checkoutData"] });
       // Clear the form
       setRollNumber("");
       setEquipmentId("");
@@ -170,7 +173,7 @@ const AdminCheckout = () => {
                 </div>
                 <div>
                   <span className="text-xl font-bold">Smart SAC</span>
-                  <span className="ml-2 text-sm text-muted-foreground">Checkout Management</span>
+                  <span className="ml-2 text-sm text-muted-foreground">{isRoomMode ? 'Room Booking' : 'Checkout Management'}</span>
                 </div>
               </div>
             </div>
@@ -185,7 +188,7 @@ const AdminCheckout = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-primary" />
-                New Checkout
+                {isRoomMode ? 'New Room Booking' : 'New Checkout'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -227,10 +230,10 @@ const AdminCheckout = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="equipment">Equipment</Label>
+                <Label htmlFor="equipment">{isRoomMode ? 'Room' : 'Equipment'}</Label>
                 <Select value={equipmentId} onValueChange={setEquipmentId}>
                   <SelectTrigger id="equipment">
-                    <SelectValue placeholder="Select available equipment" />
+                    <SelectValue placeholder={isRoomMode ? "Select a room" : "Select available equipment"} />
                   </SelectTrigger>
                   <SelectContent>
                     {isLoading ? (
@@ -272,13 +275,13 @@ const AdminCheckout = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-primary" />
-                Active Checkouts ({activeCheckouts.length})
+                Active {isRoomMode ? 'Room Bookings' : 'Checkouts'} ({activeCheckouts.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {isLoading && <p>Loading checkouts...</p>}
               {activeCheckouts.length === 0 && !isLoading && (
-                <p className="text-muted-foreground text-center">No equipment is currently checked out.</p>
+                <p className="text-muted-foreground text-center">{isRoomMode ? 'No rooms are currently booked.' : 'No equipment is currently checked out.'}</p>
               )}
               {activeCheckouts.map((checkout) => (
                 <div key={checkout.id} className="p-4 rounded-lg border-2 border-border hover:border-primary/50 transition-colors">

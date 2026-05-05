@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Activity,
   ClipboardList,
+  DoorOpen,
   History,
   LogOut,
   Megaphone,
@@ -204,7 +205,7 @@ const AdminDashboard = () => {
         </section>
 
         {/* Manage Sections */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Manage Announcements */}
           <Card
             onClick={() => navigate("/admin/announcements")}
@@ -237,6 +238,24 @@ const AdminDashboard = () => {
                   </p>
                 </div>
                 <Wrench className="w-10 h-10 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Room Booking */}
+          <Card
+            onClick={() => navigate("/admin/checkout?filter=room")}
+            className="border-2 hover:shadow-lg hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
+          >
+            <CardContent className="py-6 px-4 md:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Manage</p>
+                  <p className="text-3xl font-bold text-primary">
+                    Room Booking
+                  </p>
+                </div>
+                <DoorOpen className="w-10 h-10 text-primary" />
               </div>
             </CardContent>
           </Card>

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   Gamepad2,
   Dumbbell,
+  DoorOpen,
   Target,
   UserCircle,
   Users,
@@ -47,12 +48,15 @@ interface ApiEquipment {
   user?: { fullname: string; roll_no: string; phone_number: string };
   duration?: string;
   roll_no?: string;
+  guestName?: string;
+  guestPhone?: string;
 }
 
 interface DashboardData {
   unreadMessages: number;
   openTickets: number;
   equipment: ApiEquipment[];
+  rooms?: ApiEquipment[];
   announcements: { id: string; heading: string; content: string; footer?: string }[];
   totalHours: number;
   gamesPlayed: number;
@@ -175,6 +179,7 @@ const StudentDashboard = () => {
 
   // Safe data access with defaults
   const equipment = dashboardData?.equipment || [];
+  const rooms = dashboardData?.rooms || [];
   const announcements = dashboardData?.announcements || [];
   const openTickets = dashboardData?.openTickets || 0;
 
@@ -285,10 +290,12 @@ const StudentDashboard = () => {
                   status={equipment.status === "broken" ? "maintenance" : equipment.status}
                   currentUser={
                     equipment.user
-                      ? `${equipment.user.fullname} (${equipment.roll_no})`
-                      : undefined
+                      ? `${equipment.user.fullname} (${equipment.roll_no || 'No roll number'})`
+                      : equipment.guestName
+                      ? `${equipment.guestName} (${equipment.roll_no || 'Guest'})`
+                      : equipment.roll_no ? `Roll No: ${equipment.roll_no}` : undefined
                   }
-                  contact={equipment.user?.phone_number}
+                  contact={equipment.user?.phone_number || equipment.guestPhone}
                   timeUsed={equipment.duration}
                   rollNumber={equipment.roll_no}
                   duration={equipment.duration}
@@ -297,6 +304,46 @@ const StudentDashboard = () => {
                   bookingText="booking can only be done via admin(guard)"
                 />
               ))}
+          </div>
+        </div>
+      </section>
+
+      {/* --- ROOM STATUS SECTION --- */}
+      <section id="rooms" className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center mb-10 animate-fade-in">
+            <div className="inline-flex items-center gap-1 bg-primary/10 text-primary px-3 py-1 rounded-full mb-3 border border-primary/20">
+              <DoorOpen className="w-4 h-4" />
+              <span className="text-xs font-semibold">Real-Time Status</span>
+            </div>
+
+            <h2 className="text-3xl md:text-4xl font-extrabold text-center">
+              Room Status
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+            {rooms.map((room) => (
+              <EquipmentCard
+                key={room.id}
+                equipmentId={room.id}
+                name={room.name}
+                status={room.status === "broken" ? "maintenance" : room.status}
+                currentUser={
+                  room.user
+                    ? `${room.user.fullname} (${room.roll_no || 'No roll number'})`
+                    : room.guestName
+                    ? `${room.guestName} (${room.roll_no || 'Guest'})`
+                    : room.roll_no ? `Roll No: ${room.roll_no}` : undefined
+                }
+                contact={room.user?.phone_number || room.guestPhone}
+                timeUsed={room.duration}
+                rollNumber={room.roll_no}
+                duration={room.duration}
+                icon={<DoorOpen className="w-5 h-5 text-white" />}
+                bookingText="booking can only be done via admin(guard)"
+              />
+            ))}
           </div>
         </div>
       </section>

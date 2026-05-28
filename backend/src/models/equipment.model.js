@@ -24,6 +24,12 @@ const equipmentSchema = new mongoose.Schema({
     duration:{
         type: String
     }, 
+    guestName: {
+        type: String
+    },
+    guestPhone: {
+        type: String
+    }
 },{timestamps:true}
 )
 

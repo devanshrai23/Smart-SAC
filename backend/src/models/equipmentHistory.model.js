@@ -22,6 +22,14 @@ const equipmentHistorySchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  guestName: {
+    type: String,
+    default: null
+  },
+  guestPhone: {
+    type: String,
+    default: null
+  },
   changedAt: { 
     type: Date, 
     default: Date.now 

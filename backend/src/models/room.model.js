@@ -1,36 +1,36 @@
 import mongoose, { Schema } from "mongoose";
 
 const roomSchema = new mongoose.Schema({
-    name: {
+    name:{
         type: String,
         required: true,
         unique: true,
+        lowercase: true,
         trim: true,
     },
-    capacity: {
-        type: Number,
-        default: 0
-    },
-    status: {
+    status:{
         type: String,
-        enum: ["available", "occupied", "reserved", "maintenance"],
-        default: "available"
+        required: true,
+        enum: ["available", "in-use" , "broken"],
+        default :"available",
     },
-    currentActivity: {
+    user:{
+        type:Schema.Types.ObjectId,
+        ref:"User",
+    },
+    roll_no:{
         type: String,
-        trim: true
     },
-    timeSlot: {
-        type: String,
-        trim: true
+    duration:{
+        type: String
     },
-    // --- ADD THIS FIELD ---
-    bookedBy: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        default: null
+    guestName: {
+        type: String
+    },
+    guestPhone: {
+        type: String
     }
-    // ----------------------
-}, { timestamps: true });
+},{timestamps:true}
+)
 
-export const Room = mongoose.model("Room", roomSchema);
+export const Room = mongoose.model("Room",roomSchema);

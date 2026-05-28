@@ -4,25 +4,30 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { createEmailTransporter } from "../utils/mailtransporter.util.js";
 import { randomBytes } from "crypto";
-import { prisma } from "../db/index.js";
-import { hashPassword, isPasswordCorrect, generateAccessToken, generateRefreshToken } from "../utils/auth.js";
+import { hashPassword, isPasswordCorrect } from "../utils/auth.js";
+import { User } from "../models/user.model.js";
+import { PendingUser } from "../models/pendingUser.model.js";
+import { Message } from "../models/message.model.js";
+import { Ticket } from "../models/ticket.model.js";
+import { Equipment } from "../models/equipment.model.js";
+import { Announcement } from "../models/announcement.model.js";
+import { Room } from "../models/room.model.js";
+import { Game } from "../models/game.model.js";
 
 // Generate Access and Refresh Tokens
 const generateAccessTokenAndRefreshTokens = async (userId) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await User.findById(userId);
 
     if (!user) {
       throw new ApiError(404, "User not found");
     }
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken },
-    });
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
   }
@@ -57,14 +62,12 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // Check if user already exists
-  const existedUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { username: username.toLowerCase() },
-        { email: email.toLowerCase() },
-        { phone_number }
-      ]
-    }
+  const existedUser = await User.findOne({
+    $or: [
+      { username: username.toLowerCase() },
+      { email: email.toLowerCase() },
+      { phone_number }
+    ]
   });
 
   if (existedUser) {
@@ -77,37 +80,33 @@ const registerUser = asyncHandler(async (req, res) => {
   const hashedPassword = await hashPassword(password);
 
   // Remove any existing pending user with matching email, username, or phone to allow re-registration
-  await prisma.pendingUser.deleteMany({
-    where: {
-      OR: [
-        { email: email.toLowerCase() },
-        { username: username.toLowerCase() },
-        { phone_number }
-      ]
-    }
+  await PendingUser.deleteMany({
+    $or: [
+      { email: email.toLowerCase() },
+      { username: username.toLowerCase() },
+      { phone_number }
+    ]
   });
 
   // Create pending user with verification token
   let user;
   try {
-    user = await prisma.pendingUser.create({
-      data: {
-        fullname,
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        roll_no,
-        phone_number,
-        username: username.toLowerCase(),
-        emailVerificationToken,
-        emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      }
+    user = await PendingUser.create({
+      fullname,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      roll_no,
+      phone_number,
+      username: username.toLowerCase(),
+      emailVerificationToken,
+      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     });
   } catch (dbError) {
     console.error("PendingUser creation error:", dbError);
     throw new ApiError(500, "Failed to create pending registration. " + dbError.message);
   }
 
-  console.log("PendingUser created successfully:", user.id);
+  console.log("PendingUser created successfully:", user._id);
 
   // Send verification email
   const verificationMessage = `
@@ -142,7 +141,7 @@ const registerUser = asyncHandler(async (req, res) => {
     );
 
   } catch (emailError) {
-    await prisma.pendingUser.delete({ where: { id: user.id } });
+    await PendingUser.findByIdAndDelete(user._id);
     console.error("Email sending error:", emailError);
     throw new ApiError(500, "Error sending verification email. Please try again.");
   }
@@ -155,13 +154,11 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "username or email is required");
   }
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { username: email.toLowerCase() },
-        { email: email.toLowerCase() }
-      ]
-    }
+  const user = await User.findOne({
+    $or: [
+      { username: email.toLowerCase() },
+      { email: email.toLowerCase() }
+    ]
   });
 
   if (!user) {
@@ -172,19 +169,14 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(403, "Please verify your email before logging in.");
   }
 
-  const ispassvalid = await isPasswordCorrect(password, user.password);
+  const ispassvalid = await user.isPasswordCorrect(password);
   if (!ispassvalid) {
     throw new ApiError(401, "invalid password");
   }
 
-  const { accessToken, refreshToken } = await generateAccessTokenAndRefreshTokens(user.id);
+  const { accessToken, refreshToken } = await generateAccessTokenAndRefreshTokens(user._id);
 
-  const loggedinUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      id: true, fullname: true, email: true, username: true, roll_no: true, phone_number: true, isVerified: true, achievements: true, description: true, createdAt: true, updatedAt: true
-    }
-  });
+  const loggedinUser = await User.findById(user._id).select("-password -refreshToken");
 
   const options = {
     httpOnly: true,
@@ -214,40 +206,32 @@ const verifyEmail = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Token and email are required");
   }
 
-  const pendingUser = await prisma.pendingUser.findFirst({
-    where: {
-      email: email.toLowerCase(),
-      emailVerificationToken: token,
-      emailVerificationExpires: { gt: new Date() }
-    }
+  const pendingUser = await PendingUser.findOne({
+    email: email.toLowerCase(),
+    emailVerificationToken: token,
+    emailVerificationExpires: { $gt: new Date() }
   });
 
   if (!pendingUser) {
     throw new ApiError(400, "Invalid or expired verification token");
   }
 
-  const newUser = await prisma.user.create({
-    data: {
-      fullname: pendingUser.fullname,
-      email: pendingUser.email,
-      password: pendingUser.password,
-      roll_no: pendingUser.roll_no,
-      phone_number: pendingUser.phone_number,
-      username: pendingUser.username,
-      isVerified: true
-    }
+  const newUser = new User({
+    fullname: pendingUser.fullname,
+    email: pendingUser.email,
+    password: pendingUser.password,
+    roll_no: pendingUser.roll_no,
+    phone_number: pendingUser.phone_number,
+    username: pendingUser.username,
+    isVerified: true
   });
+  
+  newUser.unmarkModified('password');
+  await newUser.save();
 
-  await prisma.pendingUser.delete({
-    where: { id: pendingUser.id }
-  });
+  await PendingUser.findByIdAndDelete(pendingUser._id);
 
-  const verifiedUser = await prisma.user.findUnique({
-    where: { id: newUser.id },
-    select: {
-      id: true, fullname: true, email: true, username: true, roll_no: true, phone_number: true, isVerified: true, achievements: true, description: true, createdAt: true, updatedAt: true
-    }
-  });
+  const verifiedUser = await User.findById(newUser._id).select("-password -refreshToken");
 
   return res.status(200).json(
     new ApiResponse(200, verifiedUser, "Email verified successfully")
@@ -262,10 +246,10 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Email is required");
   }
 
-  const pendingUser = await prisma.pendingUser.findUnique({ where: { email: email.toLowerCase() } });
+  const pendingUser = await PendingUser.findOne({ email: email.toLowerCase() });
 
   if (!pendingUser) {
-    const verifiedUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const verifiedUser = await User.findOne({ email: email.toLowerCase() });
     if (verifiedUser) {
       throw new ApiError(400, "Email is already verified");
     }
@@ -276,13 +260,9 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 
   const emailVerificationToken = Math.floor(100000 + Math.random() * 900000).toString();
 
-  await prisma.pendingUser.update({
-    where: { id: pendingUser.id },
-    data: {
-      emailVerificationToken,
-      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000)
-    }
-  });
+  pendingUser.emailVerificationToken = emailVerificationToken;
+  pendingUser.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await pendingUser.save();
 
   const verificationMessage = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -318,9 +298,8 @@ const resendVerificationEmail = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
   const userId = req.user?._id || req.user?.id || req.body?.user;
-  await prisma.user.update({
-    where: { id: userId },
-    data: { refreshToken: null }
+  await User.findByIdAndUpdate(userId, {
+    $unset: { refreshToken: 1 }
   });
 
   const options = {
@@ -349,7 +328,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
-    const user = await prisma.user.findUnique({ where: { id: decodedToken?._id || decodedToken?.id } });
+    const user = await User.findById(decodedToken?._id || decodedToken?.id);
     if (!user) {
       throw new ApiError(401, "invalid refresh token");
     }
@@ -362,7 +341,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       sameSite: "none",
     };
 
-    const { accessToken, refreshToken } = await generateAccessTokenAndRefreshTokens(user.id);
+    const { accessToken, refreshToken } = await generateAccessTokenAndRefreshTokens(user._id);
     return res.status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options)
@@ -379,16 +358,13 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const userId = req.user?._id || req.user?.id;
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await User.findById(userId);
 
-  const isPassCorrect = await isPasswordCorrect(oldPassword, user.password);
+  const isPassCorrect = await user.isPasswordCorrect(oldPassword);
   if (!isPassCorrect) throw new ApiError(400, "invalid old password");
 
-  const hashedNewPassword = await hashPassword(newPassword);
-  await prisma.user.update({
-    where: { id: userId },
-    data: { password: hashedNewPassword }
-  });
+  user.password = newPassword; // Will be hashed in pre-save hook
+  await user.save();
 
   return res.status(200).json(new ApiResponse(200, {}, "password changed"));
 });
@@ -398,7 +374,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   if (!email) {
     throw new ApiError(400, "Email is required");
   }
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) {
     return res.status(200).json(
       new ApiResponse(200, {}, "If an account exists with this email, a password reset token has been sent")
@@ -407,13 +383,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      passwordResetToken: resetToken,
-      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000)
-    }
-  });
+  user.passwordResetToken = resetToken;
+  user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
 
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -454,11 +426,9 @@ const verifyResetToken = asyncHandler(async (req, res, next) => {
     throw new ApiError(400, "Token is required");
   }
 
-  const user = await prisma.user.findFirst({
-    where: {
-      passwordResetToken: token,
-      passwordResetExpires: { gt: new Date() }
-    }
+  const user = await User.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: new Date() }
   });
 
   if (!user) {
@@ -481,28 +451,20 @@ const resetPassword = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character");
   }
 
-  const user = await prisma.user.findFirst({
-    where: {
-      passwordResetToken: token,
-      passwordResetExpires: { gt: new Date() }
-    }
+  const user = await User.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: new Date() }
   });
 
   if (!user) {
     throw new ApiError(400, "Invalid or expired reset token");
   }
 
-  const hashedPassword = await hashPassword(newPassword);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      password: hashedPassword,
-      passwordResetToken: null,
-      passwordResetExpires: null,
-      refreshToken: null
-    }
-  });
+  user.password = newPassword;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  user.refreshToken = undefined;
+  await user.save();
 
   return res.status(200).json(
     new ApiResponse(200, {}, "Password reset successful. Please login with your new password.")
@@ -511,20 +473,9 @@ const resetPassword = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   const userId = req.user?._id || req.user?.id;
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      games: { include: { game: true } }
-    }
-  });
+  const user = await User.findById(userId).populate("games.game").select("-password -refreshToken");
 
-  // omit sensitive data
-  delete user.password;
-  delete user.refreshToken;
-
-  const bookedItems = await prisma.equipment.findMany({
-    where: { userId: user.id }
-  });
+  const bookedItems = await Equipment.find({ user: userId });
 
   return res.status(200).json(
     new ApiResponse(
@@ -554,11 +505,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     if (!phoneRegex.test(updates.phone_number)) {
       throw new ApiError(400, "Phone number must be 10 digits");
     }
-    const existingPhone = await prisma.user.findFirst({
-      where: {
-        phone_number: updates.phone_number,
-        id: { not: userId }
-      }
+    const existingPhone = await User.findOne({
+      phone_number: updates.phone_number,
+      _id: { $ne: userId }
     });
     if (existingPhone) throw new ApiError(409, "Phone number already in use");
   }
@@ -568,8 +517,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     if (!email.endsWith('@iiita.ac.in')) {
       throw new ApiError(400, "Only IIITA student email IDs (@iiita.ac.in) are allowed");
     }
-    const existingEmail = await prisma.user.findFirst({
-      where: { email, id: { not: userId } }
+    const existingEmail = await User.findOne({
+      email, _id: { $ne: userId }
     });
     if (existingEmail) throw new ApiError(409, "Email already in use");
     updates.email = email;
@@ -586,40 +535,18 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Game rating must be a number between 0 and 5");
       }
     }
+    updates.games = userGames;
   }
 
   if (Object.keys(updates).length === 0 && !userGames) {
     throw new ApiError(400, "At least one field is required to update");
   }
 
-  // Handle Game updates using transaction
-  const updatedUser = await prisma.$transaction(async (tx) => {
-    let user = await tx.user.update({
-      where: { id: userId },
-      data: updates
-    });
-
-    if (userGames) {
-      // Clear existing ratings
-      await tx.userGameRating.deleteMany({ where: { userId: user.id } });
-
-      // Add new ratings
-      for (const g of userGames) {
-        await tx.userGameRating.create({
-          data: {
-            userId: user.id,
-            gameId: g.game,
-            rating: g.rating
-          }
-        });
-      }
-    }
-
-    return tx.user.findUnique({
-      where: { id: userId },
-      include: { games: { include: { game: true } } }
-    });
-  });
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: updates },
+    { new: true }
+  ).populate("games.game").select("-password -refreshToken");
 
   return res.status(200).json(new ApiResponse(200, updatedUser, "Account details updated successfully"));
 });
@@ -636,11 +563,11 @@ const dashboardDetails = asyncHandler(async (req, res) => {
     announcements,
     rooms
   ] = await Promise.all([
-    prisma.message.count({ where: { receiverId: userId, status: { notIn: ["read", "unsent"] } } }),
-    prisma.ticket.count({ where: { senderId: userId, status: "open" } }),
-    prisma.equipment.findMany({ include: { user: { select: { fullname: true, phone_number: true } } } }),
-    prisma.announcement.findMany({ orderBy: { createdAt: 'desc' }, take: 2 }),
-    prisma.room.findMany({ include: { user: { select: { fullname: true, phone_number: true } } } })
+    Message.countDocuments({ receiver: userId, status: { $nin: ["read", "unsent"] } }),
+    Ticket.countDocuments({ sender: userId, status: "open" }),
+    Equipment.find().populate("user", "fullname phone_number"),
+    Announcement.find().sort({ createdAt: -1 }).limit(2),
+    Room.find().populate("user", "fullname phone_number")
   ]);
 
   return res.status(200).json(
@@ -654,14 +581,9 @@ const dashboardDetails = asyncHandler(async (req, res) => {
 
 const getAllPlayers = asyncHandler(async (req, res) => {
   const userId = req.user?._id || req.user?.id;
-  const players = await prisma.user.findMany({
-    where: { id: { not: userId } },
-    select: {
-      id: true,
-      fullname: true,
-      games: { include: { game: { select: { name: true } } } }
-    }
-  });
+  const players = await User.find({ _id: { $ne: userId } })
+    .select("fullname games")
+    .populate("games.game", "name");
 
   if (!players) {
     throw new ApiError(404, "No players found");
@@ -679,17 +601,10 @@ const getPlayers = asyncHandler(async (req, res) => {
 
   const gameIdArray = gameIds.split(",");
 
-  const players = await prisma.user.findMany({
-    where: {
-      id: { not: userId },
-      games: { some: { gameId: { in: gameIdArray } } }
-    },
-    select: {
-      id: true,
-      fullname: true,
-      games: { include: { game: { select: { name: true } } } }
-    }
-  });
+  const players = await User.find({
+    _id: { $ne: userId },
+    "games.game": { $in: gameIdArray }
+  }).select("fullname games").populate("games.game", "name");
 
   if (!players || players.length === 0) {
     throw new ApiError(404, "No players found for the specified games");
@@ -706,16 +621,11 @@ const sendMessage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Receiver ID and content are required");
   }
 
-  const uniqueId = randomBytes(16).toString('hex');
-
-  const message = await prisma.message.create({
-    data: {
-      id: uniqueId,
-      senderId: senderId,
-      receiverId: receiverId,
-      content: content,
-      status: "sent"
-    }
+  const message = await Message.create({
+    sender: senderId,
+    receiver: receiverId,
+    content: content,
+    status: "sent"
   });
 
   return res.status(201).json(new ApiResponse(201, message, "Message sent successfully"));
@@ -724,45 +634,70 @@ const sendMessage = asyncHandler(async (req, res) => {
 const getConversations = asyncHandler(async (req, res) => {
   const userId = req.user?._id || req.user?.id;
 
-  // We rewrite the aggregate pipeline to Prisma equivalent
-  // using queryRaw since Prisma lacks grouped aggregations of complex relation data natively easily.
-  const conversationsRaw = await prisma.$queryRaw`
-    WITH RankedMessages AS (
-      SELECT 
-        m.*,
-        CASE WHEN m."senderId" = ${userId} THEN m."receiverId" ELSE m."senderId" END as "otherUserId",
-        ROW_NUMBER() OVER (
-          PARTITION BY CASE WHEN m."senderId" = ${userId} THEN m."receiverId" ELSE m."senderId" END
-          ORDER BY m."createdAt" DESC
-        ) as rn
-      FROM "Message" m
-      WHERE m."senderId" = ${userId} OR m."receiverId" = ${userId}
-    )
-    SELECT 
-      rm.*,
-      (SELECT count(*) FROM "Message" m2 WHERE m2."receiverId" = ${userId} AND m2."senderId" = rm."otherUserId" AND m2.status = 'received') as "unreadCount",
-      u.fullname as "otherUser_fullname"
-    FROM RankedMessages rm
-    JOIN "User" u ON u.id = rm."otherUserId"
-    WHERE rm.rn = 1
-    ORDER BY rm."createdAt" DESC
-  `;
-
-  // Format the raw output to match the previous frontend structure
-  const formattedConversations = conversationsRaw.map(conv => ({
-    otherUser: {
-      id: conv.otherUserId,
-      fullname: conv.otherUser_fullname,
-      sport: "N/A" // Simplified here as getting specific first game is complex in raw query
+  const conversations = await Message.aggregate([
+    {
+      $match: {
+        $or: [{ sender: userId }, { receiver: userId }]
+      }
     },
-    lastMessage: conv.content,
-    lastMessageStatus: conv.status,
-    lastMessageSender: conv.senderId,
-    lastMessageCreatedAt: conv.createdAt,
-    unreadCount: Number(conv.unreadCount)
-  }));
+    {
+      $sort: { createdAt: -1 }
+    },
+    {
+      $group: {
+        _id: {
+          $cond: [
+            { $eq: ["$sender", userId] },
+            "$receiver",
+            "$sender"
+          ]
+        },
+        lastMessage: { $first: "$content" },
+        lastMessageStatus: { $first: "$status" },
+        lastMessageSender: { $first: "$sender" },
+        lastMessageCreatedAt: { $first: "$createdAt" },
+        unreadCount: {
+          $sum: {
+            $cond: [
+              { $and: [{ $eq: ["$receiver", userId] }, { $eq: ["$status", "received"] }] },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "otherUser"
+      }
+    },
+    {
+      $unwind: "$otherUser"
+    },
+    {
+      $project: {
+        otherUser: {
+          id: "$otherUser._id",
+          fullname: "$otherUser.fullname",
+          sport: "N/A"
+        },
+        lastMessage: 1,
+        lastMessageStatus: 1,
+        lastMessageSender: 1,
+        lastMessageCreatedAt: 1,
+        unreadCount: 1
+      }
+    },
+    {
+      $sort: { lastMessageCreatedAt: -1 }
+    }
+  ]);
 
-  return res.status(200).json(new ApiResponse(200, formattedConversations, "Conversations fetched successfully"));
+  return res.status(200).json(new ApiResponse(200, conversations, "Conversations fetched successfully"));
 });
 
 const getMessages = asyncHandler(async (req, res) => {
@@ -772,24 +707,21 @@ const getMessages = asyncHandler(async (req, res) => {
   if (!otherUserId) throw new ApiError(400, "The other user's ID is required");
 
   // Mark all messages from this user as "read"
-  await prisma.message.updateMany({
-    where: { receiverId: userId, senderId: otherUserId, status: "received" },
-    data: { status: "read" }
-  });
+  await Message.updateMany(
+    { receiver: userId, sender: otherUserId, status: "received" },
+    { $set: { status: "read" } }
+  );
 
-  const messages = await prisma.message.findMany({
-    where: {
-      OR: [
-        { senderId: userId, receiverId: otherUserId },
-        { senderId: otherUserId, receiverId: userId }
-      ]
-    },
-    orderBy: { createdAt: 'asc' }
-  });
+  const messages = await Message.find({
+    $or: [
+      { sender: userId, receiver: otherUserId },
+      { sender: otherUserId, receiver: userId }
+    ]
+  }).sort({ createdAt: 1 });
 
   const formattedMessages = messages.map(msg => ({
-    id: msg.id,
-    sender: msg.senderId,
+    id: msg._id,
+    sender: msg.sender,
     content: msg.content,
     createdAt: msg.createdAt,
     status: msg.status
@@ -807,12 +739,10 @@ const newEquipmentTicket = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const ticket = await prisma.ticket.create({
-    data: {
-      heading,
-      content: details,
-      senderId: userId
-    }
+  const ticket = await Ticket.create({
+    heading,
+    content: details,
+    sender: userId
   });
 
   const message = `
@@ -832,7 +762,7 @@ const newEquipmentTicket = asyncHandler(async (req, res) => {
       subject: "New Equipment Request",
       html: message,
     });
-    res.status(200).json(new ApiResponse(200, { ticketId: ticket.id }, "New equipment ticket sent successfully"));
+    res.status(200).json(new ApiResponse(200, { ticketId: ticket._id }, "New equipment ticket sent successfully"));
   } catch (error) {
     throw new ApiError(500, "Failed to send email");
   }
@@ -847,16 +777,14 @@ const brokenEquipmentTicket = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const equipmentData = await prisma.equipment.findUnique({ where: { id: equipmentId } });
+  const equipmentData = await Equipment.findById(equipmentId);
   if (!equipmentData) throw new ApiError(404, "Equipment not found");
 
-  const ticket = await prisma.ticket.create({
-    data: {
-      heading,
-      content,
-      equipmentId: equipmentData.id,
-      senderId: userId
-    }
+  const ticket = await Ticket.create({
+    heading,
+    content,
+    equipment: equipmentData._id,
+    sender: userId
   });
 
   const message = `
@@ -875,14 +803,14 @@ const brokenEquipmentTicket = asyncHandler(async (req, res) => {
       subject: "Broken Equipment Report",
       html: message,
     });
-    res.status(200).json(new ApiResponse(200, { ticketId: ticket.id }, "Broken equipment report sent successfully"));
+    res.status(200).json(new ApiResponse(200, { ticketId: ticket._id }, "Broken equipment report sent successfully"));
   } catch (error) {
     throw new ApiError(500, "Failed to send email");
   }
 });
 
 const getGames = asyncHandler(async (req, res) => {
-  const games = await prisma.game.findMany();
+  const games = await Game.find();
   return res.status(200).json(new ApiResponse(200, games, "Games fetched successfully"));
 });
 

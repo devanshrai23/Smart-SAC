@@ -1,11 +1,16 @@
 import "dotenv/config";
-import { prisma } from "./db/index.js";
+import connectDB from "./db/index.js";
+import mongoose from "mongoose";
+import { Room } from "./models/room.model.js";
+import { Equipment } from "./models/equipment.model.js";
+import { Game } from "./models/game.model.js";
+import { Announcement } from "./models/announcement.model.js";
 
 const dummyRooms = [
   {
     name: "Drama Room",
     capacity: 30,
-    status: "occupied",
+    status: "in-use",
     currentActivity: "Theater Practice",
     timeSlot: "4:00 PM - 6:00 PM",
   },
@@ -17,7 +22,7 @@ const dummyRooms = [
   {
     name: "Art Room",
     capacity: 20,
-    status: "reserved",
+    status: "available",
     currentActivity: "Painting Workshop",
     timeSlot: "6:00 PM - 8:00 PM",
   },
@@ -53,145 +58,79 @@ const dummyAnnouncements = [
   }
 ];
 
-// --- 2. The Seeder Function ---
-
 const seedDatabase = async () => {
   try {
     console.log("Connecting to database...");
+    await connectDB();
 
-    // --- Clear Old Data ---
     console.log("Clearing old data...");
-    await prisma.room.deleteMany({});
-    await prisma.equipment.deleteMany({});
-    await prisma.game.deleteMany({});
-    await prisma.announcement.deleteMany({});
+    await Room.deleteMany({});
+    await Equipment.deleteMany({});
+    await Game.deleteMany({});
+    await Announcement.deleteMany({});
 
-    // --- Seed Rooms ---
-    await prisma.room.createMany({
-      data: dummyRooms,
-    });
+    await Room.insertMany(dummyRooms);
     console.log("Rooms seeded.");
 
-    // --- Seed Announcements ---
-    await prisma.announcement.createMany({
-      data: dummyAnnouncements,
-    });
+    await Announcement.insertMany(dummyAnnouncements);
     console.log("Announcements seeded.");
 
-    // --- Seed Games & Equipment (with relationships) ---
     console.log("Seeding Games and Equipment...");
     
-    // Create Games & Equipments using nested writes
-    await prisma.game.create({
-      data: {
+    // Create Games & Equipments
+    const gamesData = [
+      {
         name: "Table Tennis",
-        equipments: {
-          create: {
-            name: "Table Tennis",
-            status: "in_use"
-          }
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [{ name: "Table Tennis", status: "in-use" }]
+      },
+      {
         name: "Snooker",
-        equipments: {
-          create: {
-            name: "Snooker Table",
-            status: "available"
-          }
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [{ name: "Snooker Table", status: "available" }]
+      },
+      {
         name: "Badminton",
-        equipments: {
-          create: {
-            name: "Badminton Set",
-            status: "available"
-          }
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [{ name: "Badminton Set", status: "available" }]
+      },
+      {
         name: "Chess",
-        equipments: {
-          create: {
-            name: "Chess Set",
-            status: "available"
-          }
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [{ name: "Chess Set", status: "available" }]
+      },
+      {
         name: "Cricket",
-        equipments: {
-          create: [
-            { name: "Cricket Bat", status: "available" },
-            { name: "Cricket Ball", status: "available" }
-          ]
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [
+          { name: "Cricket Bat", status: "available" },
+          { name: "Cricket Ball", status: "available" }
+        ]
+      },
+      {
         name: "Volleyball",
-        equipments: {
-          create: {
-            name: "Volleyball",
-            status: "available"
-          }
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [{ name: "Volleyball", status: "available" }]
+      },
+      {
         name: "Basketball",
-        equipments: {
-          create: {
-            name: "Basketball",
-            status: "available"
-          }
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [{ name: "Basketball", status: "available" }]
+      },
+      {
         name: "Lawn Tennis",
-        equipments: {
-          create: [
-            { name: "Lawn Tennis Racket", status: "available" },
-            { name: "Lawn Tennis Ball", status: "available" }
-          ]
-        }
-      }
-    });
-
-    await prisma.game.create({
-      data: {
+        equipments: [
+          { name: "Lawn Tennis Racket", status: "available" },
+          { name: "Lawn Tennis Ball", status: "available" }
+        ]
+      },
+      {
         name: "Football",
-        equipments: {
-          create: {
-            name: "Football",
-            status: "available"
-          }
-        }
+        equipments: [{ name: "Football", status: "available" }]
       }
-    });
+    ];
+
+    for (const gd of gamesData) {
+      const game = await Game.create({ name: gd.name.toLowerCase() });
+      for (const eq of gd.equipments) {
+        await Equipment.create({ name: eq.name.toLowerCase(), status: eq.status });
+      }
+    }
 
     console.log("Games and Equipment seeded.");
-
     console.log("✅ Database seeding successful!");
     process.exit(0);
 
@@ -199,7 +138,7 @@ const seedDatabase = async () => {
     console.error("Error seeding database:", error);
     process.exit(1);
   } finally {
-    await prisma.$disconnect();
+    await mongoose.disconnect();
   }
 };
 

@@ -37,8 +37,8 @@
 
 ### Backend
 - **Framework:** Node.js & Express.js
-- **Database:** PostgreSQL
-- **ORM:** Prisma
+- **Database:** MongoDB
+- **ODM:** Mongoose
 - **Authentication:** JSON Web Tokens (JWT) & bcryptjs
 - **File Uploads:** Multer & Cloudinary
 - **Email Services:** Nodemailer (for OTPs and verification)
@@ -50,7 +50,7 @@
 
 ### Prerequisites
 - Node.js (v18 or higher recommended)
-- PostgreSQL installed and running
+- MongoDB installed and running
 - Cloudinary account (for image uploads)
 - SMTP credentials (e.g., Gmail App Password for sending emails)
 
@@ -71,9 +71,11 @@ npm install
 ```
 Create a `.env` file in the `backend` directory and add the following variables:
 ```env
-DATABASE_URL="postgresql://<username>:<password>@localhost:5432/<database_name>?schema=public"
-JWT_SECRET="your_jwt_secret_key"
-PORT=5000
+MONGODB_URI="mongodb://127.0.0.1:27017/smartsac"
+ACCESS_TOKEN_SECRET="your_access_token_secret"
+REFRESH_TOKEN_SECRET="your_refresh_token_secret"
+ADMIN_PASSWORD="admin_secret_password"
+PORT=8000
 
 # Nodemailer SMTP Configuration
 SMTP_HOST="smtp.gmail.com"
@@ -86,11 +88,7 @@ CLOUDINARY_CLOUD_NAME="your_cloud_name"
 CLOUDINARY_API_KEY="your_api_key"
 CLOUDINARY_API_SECRET="your_api_secret"
 ```
-Run Prisma migrations to initialize the database schema:
-```bash
-npx prisma migrate dev
-```
-Seed the database with initial data (equipment, admin accounts, etc.):
+Seed the database with initial data (rooms, games, equipment, etc.):
 ```bash
 npm run seed
 ```

@@ -1,11 +1,12 @@
 import express from "express"
 import cors from "cors"
-import cookieParser from "cookie-parser"
+import cookieParser from "cookie-parser" 
 import { ApiError } from "./utils/ApiError.js" 
 
 const app = express();
 
-// Connects Frontend to Backend
+// Connects Frontend to Backend 
+console.log("CORS Origin:", process.env.CorsOrigin);
 app.use(cors({ 
     origin: process.env.CorsOrigin,
     credentials: true

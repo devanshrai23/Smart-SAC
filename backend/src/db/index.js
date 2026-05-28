@@ -1,21 +1,23 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pkg from "pg";
-const { Pool } = pkg;
+import mongoose from "mongoose";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter, log: ['query'] });
+mongoose.set('toJSON', {
+  virtuals: true,
+  transform: (doc, converted) => {
+    delete converted._id;
+    delete converted.__v;
+  }
+});
+
+mongoose.set('toObject', { virtuals: true });
 
 const connectDB = async () => {
     try {
-        await prisma.$connect();
-        console.log(`✅ PostgreSQL connected !!`);
+        const connectionInstance = await mongoose.connect(process.env.MONGODB_URI);
+        console.log(`\n MongoDB connected !! DB HOST: ${connectionInstance.connection.host}`);
     } catch (error) {
-        console.error("❌ database initial connection failed", error);
+        console.error("MONGODB connection FAILED ", error);
         process.exit(1);
     }
 };
 
-export { prisma };
 export default connectDB;

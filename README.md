@@ -108,7 +108,7 @@ npm install
 ```
 Create a `.env` file in the `frontend` directory and add your backend API URL:
 ```env
-VITE_API_URL="http://localhost:5000"
+VITE_API_URL="http://localhost:8000"
 ```
 Start the frontend development server:
 ```bash
@@ -116,4 +116,4 @@ npm run dev
 ```
 
 ### 4. Access the Application
-Open your browser and navigate to the URL provided by Vite (usually `http://localhost:5173`).
+Open your browser and navigate to the URL provided by Vite (usually `http://localhost:8080`).

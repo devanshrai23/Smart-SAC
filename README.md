@@ -2,7 +2,6 @@
 
 **Smart-SAC** (Student Activity Center) is a comprehensive full-stack application designed to modernize and streamline the management of student activity centers. Developed as a DBMS Group Project, it provides a unified platform for students to manage sports equipment, book facilities, communicate with peers, and raise issues, while giving administrators a powerful dashboard to oversee operations.
 
----
 
 ## 🚀 Features and Functionality
 
